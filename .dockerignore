@@ -1,0 +1,12 @@
+.git
+
+.dockerignore
+.editorconfig
+.gitignore
+Dockerfile
+LICENSE
+Makefile
+README.md
+
+build/
+coverage.out

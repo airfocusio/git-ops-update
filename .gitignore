@@ -1,0 +1,4 @@
+build/
+coverage.out
+.git-ops-update.yaml
+.git-ops-update.*.yaml
