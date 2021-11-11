@@ -103,6 +103,7 @@ func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
