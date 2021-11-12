@@ -177,18 +177,18 @@ func TestSemverSortStrategyCompare(t *testing.T) {
 func TestSemverSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, true, SemverExtractStrategy{}.IsCompatible("1.0.0", "1.0.0"))
 
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMajor: true}}.IsCompatible("1.0.0", "1.0.0"))
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMajor: true}}.IsCompatible("1.0.0", "1.0.1"))
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMajor: true}}.IsCompatible("1.0.0", "1.1.0"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMajor: true}}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "1.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "1.0.1"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "1.1.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "2.0.0"))
 
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMinor: true}}.IsCompatible("1.0.0", "1.0.0"))
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMinor: true}}.IsCompatible("1.0.0", "1.0.1"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMinor: true}}.IsCompatible("1.0.0", "1.1.0"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinMinor: true}}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.0.1"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.1.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "2.0.0"))
 
-	assert.Equal(t, true, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinPatch: true}}.IsCompatible("1.0.0", "1.0.0"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinPatch: true}}.IsCompatible("1.0.0", "1.0.1"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinPatch: true}}.IsCompatible("1.0.0", "1.1.0"))
-	assert.Equal(t, false, SemverExtractStrategy{Config: SemverExtractStrategyConfig{PinPatch: true}}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.0.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.0.1"))
+	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.1.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "2.0.0"))
 }

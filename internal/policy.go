@@ -9,29 +9,6 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-type LexicographicExtractStrategyConfig struct{}
-
-type NumericExtractStrategyConfig struct{}
-
-type SemverExtractStrategyConfig struct {
-	PinMajor         bool `json:"pinMajor"`
-	PinMinor         bool `json:"pinMinor"`
-	PinPatch         bool `json:"pinPatch"`
-	AllowPrereleases bool `json:"allowPrereleases"`
-}
-
-type ExtractConfig struct {
-	Value         string                              `json:"value"`
-	Lexicographic *LexicographicExtractStrategyConfig `json:"lexicographic"`
-	Numeric       *NumericExtractStrategyConfig       `json:"numeric"`
-	Semver        *SemverExtractStrategyConfig        `json:"semver"`
-}
-
-type PolicyConfig struct {
-	Pattern  string          `json:"pattern"`
-	Extracts []ExtractConfig `json:"extracts"`
-}
-
 type Policy struct {
 	Pattern  *regexp.Regexp
 	Extracts []Extract
@@ -49,15 +26,16 @@ type ExtractStrategy interface {
 }
 
 type LexicographicExtractStrategy struct {
-	Config LexicographicExtractStrategyConfig
 }
 
 type NumericExtractStrategy struct {
-	Config NumericExtractStrategyConfig
 }
 
 type SemverExtractStrategy struct {
-	Config SemverExtractStrategyConfig
+	PinMajor         bool
+	PinMinor         bool
+	PinPatch         bool
+	AllowPrereleases bool
 }
 
 var extractPattern = regexp.MustCompile(`<([a-zA-Z0-9\-]+)>`)
@@ -222,13 +200,13 @@ func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
 func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	v1sv, _ := semver.Make(v1)
 	v2sv, _ := semver.Make(v2)
-	if str.Config.PinMajor && v1sv.Major != v2sv.Major {
+	if str.PinMajor && v1sv.Major != v2sv.Major {
 		return false
 	}
-	if str.Config.PinMinor && (v1sv.Major != v2sv.Major || v1sv.Minor != v2sv.Minor) {
+	if str.PinMinor && (v1sv.Major != v2sv.Major || v1sv.Minor != v2sv.Minor) {
 		return false
 	}
-	if str.Config.PinPatch && (v1sv.Major != v2sv.Major || v1sv.Minor != v2sv.Minor || v1sv.Patch != v2sv.Patch) {
+	if str.PinPatch && (v1sv.Major != v2sv.Major || v1sv.Minor != v2sv.Minor || v1sv.Patch != v2sv.Patch) {
 		return false
 	}
 	return true

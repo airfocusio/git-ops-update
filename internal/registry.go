@@ -10,44 +10,35 @@ import (
 )
 
 type HttpBasicCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string
+	Password string
 }
 
 type Registry interface {
+	GetInterval() Duration
 	FetchVersions(resource string) (*[]string, error)
 }
 
-type RegistryConfigDocker struct {
-	Url         string               `json:"url"`
-	Credentials HttpBasicCredentials `json:"credentials"`
-}
-
-type RegistryConfigHelm struct {
-	Url         string               `json:"url"`
-	Credentials HttpBasicCredentials `json:"credentials"`
-}
-
-type RegistryConfig struct {
-	Interval Duration              `json:"interval"`
-	Docker   *RegistryConfigDocker `json:"docker"`
-	Helm     *RegistryConfigHelm   `json:"helm"`
-}
-
 type DockerRegistry struct {
-	Interval Duration
-	Config   *RegistryConfigDocker
+	Interval    Duration
+	Url         string
+	Credentials HttpBasicCredentials
 }
 
 type HelmRegistry struct {
-	Interval Duration
-	Config   *RegistryConfigHelm
+	Interval    Duration
+	Url         string
+	Credentials HttpBasicCredentials
+}
+
+func (r DockerRegistry) GetInterval() Duration {
+	return r.Interval
 }
 
 func (r DockerRegistry) FetchVersions(repository string) (*[]string, error) {
-	url := strings.TrimSuffix(r.Config.Url, "/")
-	username := r.Config.Credentials.Username
-	password := r.Config.Credentials.Password
+	url := strings.TrimSuffix(r.Url, "/")
+	username := r.Credentials.Username
+	password := r.Credentials.Password
 	transport := registry.WrapTransport(http.DefaultTransport, url, username, password)
 	client := &registry.Registry{
 		URL: url,
@@ -73,10 +64,14 @@ type helmRegistryIndex struct {
 	} `yaml:"entries"`
 }
 
+func (r HelmRegistry) GetInterval() Duration {
+	return r.Interval
+}
+
 func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
-	url := strings.TrimSuffix(r.Config.Url, "/") + "/index.yaml"
-	username := r.Config.Credentials.Username
-	password := r.Config.Credentials.Password
+	url := strings.TrimSuffix(r.Url, "/") + "/index.yaml"
+	username := r.Credentials.Username
+	password := r.Credentials.Password
 	req, err := http.NewRequest("GET", url, nil)
 	client := &http.Client{}
 	if err != nil {

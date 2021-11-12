@@ -1,9 +1,8 @@
 files:
   includes:
-    - '*.yaml'
+    - '\.yaml$'
   excludes:
-    - '.git-ops-update.yaml'
-    - '.git-ops-update.cache.yaml'
+    - '.git-ops-update(\.cache)?\.yaml$'
 registries:
   docker:
     interval: 1h

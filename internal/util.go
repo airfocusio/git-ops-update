@@ -5,54 +5,35 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 )
 
-func fileList(dir string, includes []string, excludes []string) (*[]string, error) {
-	temp := []string{}
-	for _, exclude := range excludes {
-		fs, err := fileGlob(dir, exclude)
-		if err != nil {
-			return nil, err
-		}
-		temp = append(temp, *fs...)
-	}
-	files := []string{}
-	for _, include := range includes {
-		fs, err := fileGlob(dir, include)
-		if err != nil {
-			return nil, err
-		}
-		for _, f := range *fs {
-			excluded := false
-			for _, f2 := range temp {
-				if f == f2 {
-					excluded = true
-					break
-				}
-			}
-			if !excluded {
-				files = append(files, f)
-			}
-		}
-	}
-	return &files, nil
-}
-
-func fileGlob(dir string, pattern string) (*[]string, error) {
+func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*[]string, error) {
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		_, file := filepath.Split(path)
-		matched, err := filepath.Match(pattern, file)
+		pathRel, err := filepath.Rel(dir, path)
 		if err != nil {
 			return err
 		}
-		if matched {
-			files = append(files, path)
+
+		for _, i := range includes {
+			if i.Match([]byte(pathRel)) {
+				excluded := false
+				for _, e := range excludes {
+					if e.Match([]byte(pathRel)) {
+						excluded = true
+					}
+				}
+				if !excluded {
+					files = append(files, path)
+					return nil
+				}
+			}
 		}
 		return nil
 	})

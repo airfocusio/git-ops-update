@@ -6,25 +6,81 @@ import (
 	"io/ioutil"
 	"regexp"
 
-	"github.com/google/go-cmp/cmp"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
-type GitOpsUpdaterConfigFiles struct {
+type GitOpsUpdaterConfigRawHttpCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type GitOpsUpdaterConfigRawFiles struct {
 	Includes []string `json:"includes"`
 	Excludes []string `json:"excludes"`
 }
 
+type GitOpsUpdaterConfigRawRegistryDocker struct {
+	Url         string                                `json:"url"`
+	Credentials GitOpsUpdaterConfigRawHttpCredentials `json:"credentials"`
+}
+
+type GitOpsUpdaterConfigRawRegistryHelm struct {
+	Url         string                                `json:"url"`
+	Credentials GitOpsUpdaterConfigRawHttpCredentials `json:"credentials"`
+}
+
+type GitOpsUpdaterConfigRawRegistry struct {
+	Interval Duration                              `json:"interval"`
+	Docker   *GitOpsUpdaterConfigRawRegistryDocker `json:"docker"`
+	Helm     *GitOpsUpdaterConfigRawRegistryHelm   `json:"helm"`
+}
+
+type GitOpsUpdaterConfigRawPolicyExtractLexicographicStrategy struct {
+	Pin bool `json:"pin"`
+}
+
+type GitOpsUpdaterConfigRawPolicyExtractNumericStrategyConfig struct {
+	Pin bool `json:"pin"`
+}
+
+type GitOpsUpdaterConfigRawPolicyExtractSemverStrategy struct {
+	PinMajor         bool `json:"pinMajor"`
+	PinMinor         bool `json:"pinMinor"`
+	PinPatch         bool `json:"pinPatch"`
+	AllowPrereleases bool `json:"allowPrereleases"`
+}
+
+type GitOpsUpdaterConfigRawPolicyExtract struct {
+	Value         string                                                    `json:"value"`
+	Lexicographic *GitOpsUpdaterConfigRawPolicyExtractLexicographicStrategy `json:"lexicographic"`
+	Numeric       *GitOpsUpdaterConfigRawPolicyExtractNumericStrategyConfig `json:"numeric"`
+	Semver        *GitOpsUpdaterConfigRawPolicyExtractSemverStrategy        `json:"semver"`
+}
+
+type GitOpsUpdaterConfigRawPolicy struct {
+	Pattern  string                                `json:"pattern"`
+	Extracts []GitOpsUpdaterConfigRawPolicyExtract `json:"extracts"`
+}
+
+type GitOpsUpdaterConfigRaw struct {
+	Files      GitOpsUpdaterConfigRawFiles               `json:"files"`
+	Registries map[string]GitOpsUpdaterConfigRawRegistry `json:"registries"`
+	Policies   map[string]GitOpsUpdaterConfigRawPolicy   `json:"policies"`
+}
+
+type GitOpsUpdaterConfigFiles struct {
+	Includes []regexp.Regexp
+	Excludes []regexp.Regexp
+}
+
 type GitOpsUpdaterConfig struct {
-	Files           GitOpsUpdaterConfigFiles  `json:"files"`
-	RegistryConfigs map[string]RegistryConfig `json:"registries"`
-	PolicyConfigs   map[string]PolicyConfig   `json:"policies"`
-	Registries      map[string]Registry
-	Policies        map[string]Policy
+	Files      GitOpsUpdaterConfigFiles
+	Registries map[string]Registry
+	Policies   map[string]Policy
 }
 
 func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
-	config := &GitOpsUpdaterConfig{}
+	config := &GitOpsUpdaterConfigRaw{}
 
 	json, err := utilyaml.ToJSON(yaml)
 	if err != nil {
@@ -35,17 +91,43 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 		return nil, err
 	}
 
+	fileIncludes := []regexp.Regexp{}
+	for _, i := range config.Files.Includes {
+		regex, err := regexp.Compile(i)
+		if err != nil {
+			return nil, err
+		}
+		fileIncludes = append(fileIncludes, *regex)
+	}
+
+	fileExcludes := []regexp.Regexp{}
+	for _, e := range config.Files.Excludes {
+		regex, err := regexp.Compile(e)
+		if err != nil {
+			return nil, err
+		}
+		fileExcludes = append(fileExcludes, *regex)
+	}
+
 	registries := map[string]Registry{}
-	for rn, r := range config.RegistryConfigs {
+	for rn, r := range config.Registries {
 		if r.Docker != nil {
 			registries[rn] = DockerRegistry{
 				Interval: r.Interval,
-				Config:   r.Docker,
+				Url:      r.Docker.Url,
+				Credentials: HttpBasicCredentials{
+					Username: r.Docker.Credentials.Username,
+					Password: r.Docker.Credentials.Password,
+				},
 			}
 		} else if r.Helm != nil {
 			registries[rn] = HelmRegistry{
 				Interval: r.Interval,
-				Config:   r.Helm,
+				Url:      r.Helm.Url,
+				Credentials: HttpBasicCredentials{
+					Username: r.Helm.Credentials.Username,
+					Password: r.Helm.Credentials.Password,
+				},
 			}
 		} else {
 			return nil, fmt.Errorf("registry %s is invalid", rn)
@@ -53,7 +135,7 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 	}
 
 	policies := map[string]Policy{}
-	for pn, p := range config.PolicyConfigs {
+	for pn, p := range config.Policies {
 		extracts := []Extract{}
 		for ei, e := range p.Extracts {
 			if e.Lexicographic != nil {
@@ -82,11 +164,16 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 		}
 	}
 
-	config.Registries = registries
-	config.Policies = policies
-
-	return config, nil
+	return &GitOpsUpdaterConfig{
+		Files: GitOpsUpdaterConfigFiles{
+			Includes: fileIncludes,
+			Excludes: fileExcludes,
+		},
+		Registries: registries,
+		Policies:   policies,
+	}, nil
 }
+
 func LoadGitOpsUpdaterConfigFromFile(file string) (*GitOpsUpdaterConfig, error) {
 	configRaw, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -97,11 +184,4 @@ func LoadGitOpsUpdaterConfigFromFile(file string) (*GitOpsUpdaterConfig, error) 
 		return nil, err
 	}
 	return config, nil
-}
-
-func (c1 GitOpsUpdaterConfig) Equal(c2 GitOpsUpdaterConfig) bool {
-	return true &&
-		cmp.Equal(c1.Files, c2.Files) &&
-		cmp.Equal(c1.RegistryConfigs, c2.RegistryConfigs) &&
-		cmp.Equal(c1.PolicyConfigs, c2.PolicyConfigs)
 }

@@ -42,14 +42,14 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 		}
 
 		err = VisitAnnotations(fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error {
-			registryName, registry, registryConfig, resourceName, _, policy, format, err := parseAnnotation(*valueNode, annotation, *config)
+			registryName, registry, resourceName, _, policy, format, err := parseAnnotation(*valueNode, annotation, *config)
 			if err != nil {
 				return err
 			}
 
 			var availableVersions []string
 			cachedResource := cache.FindResource(*registryName, *resourceName)
-			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration(registryConfig.Interval)).Before(time.Now()) {
+			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*registry).GetInterval())).Before(time.Now()) {
 				versions, err := (*registry).FetchVersions(*resourceName)
 				if err != nil {
 					return err
@@ -103,31 +103,27 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 	return nil
 }
 
-func parseAnnotation(valueNode yaml.Node, annotation string, config GitOpsUpdaterConfig) (*string, *Registry, *RegistryConfig, *string, *string, *Policy, *Format, error) {
+func parseAnnotation(valueNode yaml.Node, annotation string, config GitOpsUpdaterConfig) (*string, *Registry, *string, *string, *Policy, *Format, error) {
 	segments := strings.Split(annotation, ":")
 
 	registryName := segments[0]
 	if len(segments) < 2 {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation is missing the resource", valueNode.Line, valueNode.Column)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation is missing the resource", valueNode.Line, valueNode.Column)
 	}
 	registry, ok := config.Registries[registryName]
 	if !ok {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation references unknown registry %s", valueNode.Line, valueNode.Column, registryName)
-	}
-	registryConfig, ok := config.RegistryConfigs[registryName]
-	if !ok {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation references unknown registry %s", valueNode.Line, valueNode.Column, registryName)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation references unknown registry %s", valueNode.Line, valueNode.Column, registryName)
 	}
 
 	resourceName := segments[1]
 	if len(segments) < 3 {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation is missing the policy", valueNode.Line, valueNode.Column)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation is missing the policy", valueNode.Line, valueNode.Column)
 	}
 
 	policyName := segments[2]
 	policy, ok := config.Policies[policyName]
 	if !ok {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation references unknown policy %s", valueNode.Line, valueNode.Column, policyName)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation references unknown policy %s", valueNode.Line, valueNode.Column, policyName)
 	}
 
 	formatName := "plain"
@@ -136,8 +132,8 @@ func parseAnnotation(valueNode yaml.Node, annotation string, config GitOpsUpdate
 	}
 	format, err := GetFormat(formatName)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
 
-	return &registryName, &registry, &registryConfig, &resourceName, &policyName, &policy, format, nil
+	return &registryName, &registry, &resourceName, &policyName, &policy, format, nil
 }
