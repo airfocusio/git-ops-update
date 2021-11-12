@@ -1,10 +1,8 @@
 # git-ops-update
 
-Replacement for `git describe --tags` that produces [semver](https://semver.org/) compatible versions that follow to semver sorting rules.
-
 ## Usage
 
-TODO
+See `example` folder.
 
 ### Binary
 

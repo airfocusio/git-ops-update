@@ -34,7 +34,7 @@ func Run(dir string, opts UpdateVersionsOptions) error {
 		return err
 	}
 
-	files, err := fileList(dir, config.Files.Includes, append(config.Files.Excludes, configFile))
+	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
 		return err
 	}
@@ -114,14 +114,16 @@ func Run(dir string, opts UpdateVersionsOptions) error {
 			return err
 		}
 
-		fileBytesOut, err := yaml.Marshal(&fileDoc)
-		if err != nil {
-			return err
-		}
+		if !opts.Dry {
+			fileBytesOut, err := yaml.Marshal(&fileDoc)
+			if err != nil {
+				return err
+			}
 
-		err = ioutil.WriteFile(file, fileBytesOut, 0644)
-		if err != nil {
-			return err
+			err = ioutil.WriteFile(file, fileBytesOut, 0644)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

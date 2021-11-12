@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ubuntu
+  labels:
+    app: ubuntu
+spec:
+  selector:
+    matchLabels:
+      app: ubuntu
+  template:
+    metadata:
+      labels:
+        app: ubuntu
+    spec:
+      containers:
+      - name: ubuntu
+        image: ubuntu:18.04 # {"$git-ops-update":"docker:library/ubuntu:ubuntu:tag"}
