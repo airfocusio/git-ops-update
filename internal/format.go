@@ -12,19 +12,16 @@ type Format interface {
 
 type PlainFormat struct{}
 
-// ExtractVersion ...
 func (f PlainFormat) ExtractVersion(str string) (*string, error) {
 	return &str, nil
 }
 
-// ReplaceVersion ...
 func (f PlainFormat) ReplaceVersion(str string, version string) (*string, error) {
 	return &version, nil
 }
 
 type TagFormat struct{}
 
-// ExtractVersion ...
 func (f TagFormat) ExtractVersion(str string) (*string, error) {
 	segments := strings.Split(str, ":")
 	if len(segments) != 2 {
@@ -33,7 +30,6 @@ func (f TagFormat) ExtractVersion(str string) (*string, error) {
 	return &segments[1], nil
 }
 
-// ReplaceVersion ...
 func (f TagFormat) ReplaceVersion(str string, version string) (*string, error) {
 	segments := strings.Split(str, ":")
 	if len(segments) != 2 {
@@ -43,7 +39,6 @@ func (f TagFormat) ReplaceVersion(str string, version string) (*string, error) {
 	return &result, nil
 }
 
-// GetFormat ...
 func GetFormat(formatName string) (*Format, error) {
 	switch formatName {
 	case "plain":

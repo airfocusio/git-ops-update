@@ -10,13 +10,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// UpdateVersionsOptions ...
 type UpdateVersionsOptions struct {
 	Dry    bool
 	Config string
 }
 
-// UpdateVersions ...
 func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 	configFile := opts.Config
 	if !filepath.IsAbs(configFile) {

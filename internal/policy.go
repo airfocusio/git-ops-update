@@ -9,13 +9,10 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// LexicographicExtractStrategyConfig ...
 type LexicographicExtractStrategyConfig struct{}
 
-// NumericExtractStrategyConfig ...
 type NumericExtractStrategyConfig struct{}
 
-// SemverExtractStrategyConfig ...
 type SemverExtractStrategyConfig struct {
 	PinMajor         bool `json:"pinMajor"`
 	PinMinor         bool `json:"pinMinor"`
@@ -23,7 +20,6 @@ type SemverExtractStrategyConfig struct {
 	AllowPrereleases bool `json:"allowPrereleases"`
 }
 
-// ExtractConfig ...
 type ExtractConfig struct {
 	Value         string                              `json:"value"`
 	Lexicographic *LexicographicExtractStrategyConfig `json:"lexicographic"`
@@ -31,14 +27,12 @@ type ExtractConfig struct {
 	Semver        *SemverExtractStrategyConfig        `json:"semver"`
 }
 
-// PolicyConfig ...
 type PolicyConfig struct {
 	Name     string          `json:"name"`
 	Pattern  string          `json:"pattern"`
 	Extracts []ExtractConfig `json:"extracts"`
 }
 
-// Policy ...
 type Policy struct {
 	Name     string
 	Pattern  *regexp.Regexp
@@ -51,30 +45,25 @@ type Extract struct {
 	Strategy ExtractStrategy
 }
 
-// ExtractStrategy ...
 type ExtractStrategy interface {
 	IsCompatible(v1 string, v2 string) bool
 	Compare(v1 string, v2 string) int
 }
 
-// LexicographicExtractStrategy ...
 type LexicographicExtractStrategy struct {
 	Config LexicographicExtractStrategyConfig
 }
 
-// NumericExtractStrategy ...
 type NumericExtractStrategy struct {
 	Config NumericExtractStrategyConfig
 }
 
-// SemverExtractStrategy ...
 type SemverExtractStrategy struct {
 	Config SemverExtractStrategyConfig
 }
 
 var extractPattern = regexp.MustCompile(`<([a-zA-Z0-9\-]+)>`)
 
-// Parse ...
 func (p Policy) Parse(version string) (*[]string, error) {
 	segments := map[string]string{}
 	if p.Pattern != nil {
@@ -131,7 +120,6 @@ func (l versionParsedList) Less(i, j int) bool {
 	return false
 }
 
-// FilterAndSort ...
 func (p Policy) FilterAndSort(currentVersion string, availableVersions []string) (*[]string, error) {
 	currentVersionParsed, err := p.Parse(currentVersion)
 	if err != nil {
@@ -182,7 +170,6 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string) (*st
 	return &currentVersion, nil
 }
 
-// Compare ...
 func (str LexicographicExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
@@ -196,12 +183,10 @@ func (str LexicographicExtractStrategy) Compare(v1 string, v2 string) int {
 	return 0
 }
 
-// IsCompatible ...
 func (str LexicographicExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	return true
 }
 
-// Compare ...
 func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
@@ -223,12 +208,10 @@ func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 	return 0
 }
 
-// IsCompatible ...
 func (str NumericExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	return true
 }
 
-// Compare ...
 func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
@@ -238,7 +221,6 @@ func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
 	return v1sv.Compare(v2sv)
 }
 
-// IsCompatible ...
 func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	v1sv, _ := semver.Make(v1)
 	v2sv, _ := semver.Make(v2)

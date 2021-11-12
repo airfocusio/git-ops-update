@@ -10,30 +10,25 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// HttpBasicCredentials ...
 type HttpBasicCredentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-// Registry ...
 type Registry interface {
 	FetchVersions(resource string) (*[]string, error)
 }
 
-// RegistryConfigDocker ...
 type RegistryConfigDocker struct {
 	Url         string               `json:"url"`
 	Credentials HttpBasicCredentials `json:"credentials"`
 }
 
-// RegistryConfigHelm ...
 type RegistryConfigHelm struct {
 	Url         string               `json:"url"`
 	Credentials HttpBasicCredentials `json:"credentials"`
 }
 
-// RegistryConfig ...
 type RegistryConfig struct {
 	Name     string                `json:"name"`
 	Interval Duration              `json:"interval"`
@@ -41,21 +36,18 @@ type RegistryConfig struct {
 	Helm     *RegistryConfigHelm   `json:"helm"`
 }
 
-// DockerRegistry ...
 type DockerRegistry struct {
 	Name     string
 	Interval Duration
 	Config   *RegistryConfigDocker
 }
 
-// HelmRegistry ...
 type HelmRegistry struct {
 	Name     string
 	Interval Duration
 	Config   *RegistryConfigHelm
 }
 
-// FetchVersions ...
 func (r DockerRegistry) FetchVersions(repository string) (*[]string, error) {
 	url := strings.TrimSuffix(r.Config.Url, "/")
 	username := r.Config.Credentials.Username
@@ -85,7 +77,6 @@ type helmRegistryIndex struct {
 	} `yaml:"entries"`
 }
 
-// FetchVersions ...
 func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
 	url := strings.TrimSuffix(r.Config.Url, "/") + "/index.yaml"
 	username := r.Config.Credentials.Username

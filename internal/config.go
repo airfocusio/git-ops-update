@@ -9,20 +9,17 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// GitOpsUpdaterConfigFiles ...
 type GitOpsUpdaterConfigFiles struct {
 	Includes []string `json:"includes"`
 	Excludes []string `json:"excludes"`
 }
 
-// GitOpsUpdaterConfig ...
 type GitOpsUpdaterConfig struct {
 	Files           GitOpsUpdaterConfigFiles `json:"files"`
 	RegistryConfigs []RegistryConfig         `json:"registries"`
 	PolicyConfigs   []PolicyConfig           `json:"policies"`
 }
 
-// LoadGitOpsUpdaterConfig ...
 func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, *map[string]Registry, *map[string]Policy, error) {
 	config := &GitOpsUpdaterConfig{}
 
@@ -88,7 +85,6 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, *map[string]Reg
 	return config, &registries, &policies, nil
 }
 
-// Equal ...
 func (c1 GitOpsUpdaterConfig) Equal(c2 GitOpsUpdaterConfig) bool {
 	return true &&
 		cmp.Equal(c1.Files, c2.Files) &&

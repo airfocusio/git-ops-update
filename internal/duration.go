@@ -5,10 +5,8 @@ import (
 	"time"
 )
 
-// Duration ...
 type Duration time.Duration
 
-// UnmarshalJSON ...
 func (d *Duration) UnmarshalJSON(json []byte) error {
 	if json[0] == '"' {
 		s := string(json[1 : len(json)-1])
