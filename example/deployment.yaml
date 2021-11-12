@@ -14,5 +14,5 @@ spec:
         app: ubuntu
     spec:
       containers:
-      - name: ubuntu
-        image: ubuntu:18.04 # {"$git-ops-update":"docker:library/ubuntu:ubuntu:tag"}
+        - name: ubuntu
+          image: ubuntu:18.04 # {"$git-ops-update":"docker:library/ubuntu:ubuntu:tag"}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -65,20 +66,20 @@ func fileResolvePath(dir string, file string) string {
 	return file
 }
 
-func fileReadYaml(file string) (*yaml.Node, error) {
+func fileReadYaml(file string, v interface{}) error {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	doc, err := readYaml(bytes)
+	err = readYaml(bytes, v)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return doc, nil
+	return nil
 }
 
-func fileWriteYaml(file string, doc yaml.Node) error {
-	bytes, err := writeYaml(doc)
+func fileWriteYaml(file string, v interface{}) error {
+	bytes, err := writeYaml(v)
 	if err != nil {
 		return err
 	}
@@ -89,13 +90,14 @@ func fileWriteYaml(file string, doc yaml.Node) error {
 	return nil
 }
 
-func readYaml(bytes []byte) (*yaml.Node, error) {
-	doc := yaml.Node{}
-	err := yaml.Unmarshal(bytes, &doc)
-	return &doc, err
+func readYaml(bytes []byte, v interface{}) error {
+	return yaml.Unmarshal(bytes, v)
 }
 
-func writeYaml(doc yaml.Node) ([]byte, error) {
-	bytes, err := yaml.Marshal(&doc)
-	return bytes, err
+func writeYaml(v interface{}) ([]byte, error) {
+	var bs bytes.Buffer
+	enc := yaml.NewEncoder(&bs)
+	enc.SetIndent(2)
+	err := enc.Encode(v)
+	return bs.Bytes(), err
 }

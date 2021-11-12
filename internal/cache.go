@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"gopkg.in/yaml.v3"
 )
 
 type GitOpsUpdaterCacheResource struct {
@@ -21,7 +20,7 @@ type GitOpsUpdaterCache struct {
 
 func LoadGitOpsUpdaterCache(bytes []byte) (*GitOpsUpdaterCache, error) {
 	cache := &GitOpsUpdaterCache{}
-	err := yaml.Unmarshal(bytes, cache)
+	err := readYaml(bytes, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +28,7 @@ func LoadGitOpsUpdaterCache(bytes []byte) (*GitOpsUpdaterCache, error) {
 }
 
 func SaveGitOpsUpdaterCache(cache GitOpsUpdaterCache) (*[]byte, error) {
-	bytes, err := yaml.Marshal(cache)
+	bytes, err := writeYaml(cache)
 	if err != nil {
 		return nil, err
 	}

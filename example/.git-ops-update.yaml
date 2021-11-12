@@ -1,9 +1,9 @@
 files:
   includes:
-  - '*.yaml'
+    - '*.yaml'
   excludes:
-  - '.git-ops-update.yaml'
-  - '.git-ops-update.cache.yaml'
+    - '.git-ops-update.yaml'
+    - '.git-ops-update.cache.yaml'
 registries:
   docker:
     interval: 1h
@@ -17,12 +17,12 @@ policies:
   semver:
     pattern: '^(?P<all>.*)$'
     extracts:
-    - value: '<all>'
-      semver: {}
+      - value: '<all>'
+        semver: {}
   ubuntu:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:
-    - value: '<year>'
-      numeric: {}
-    - value: '<month>'
-      numeric: {}
+      - value: '<year>'
+        numeric: {}
+      - value: '<month>'
+        numeric: {}

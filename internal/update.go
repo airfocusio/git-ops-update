@@ -35,7 +35,8 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 
 	for _, file := range *files {
 		log.Printf("Scanning file %s\n", file)
-		fileDoc, err := fileReadYaml(file)
+		fileDoc := &yaml.Node{}
+		err := fileReadYaml(file, fileDoc)
 		if err != nil {
 			return err
 		}
@@ -95,7 +96,7 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 		}
 
 		if !opts.Dry {
-			fileWriteYaml(file, *fileDoc)
+			fileWriteYaml(file, fileDoc)
 		}
 	}
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/heroku/docker-registry-client/registry"
-	"gopkg.in/yaml.v3"
 )
 
 type HttpBasicCredentials struct {
@@ -97,7 +96,7 @@ func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
 		return nil, err
 	}
 	index := helmRegistryIndex{}
-	err = yaml.Unmarshal(body, &index)
+	err = readYaml(body, &index)
 	if err != nil {
 		return nil, err
 	}
