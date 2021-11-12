@@ -8,26 +8,29 @@ REGISTRY ?= choffmeister
 
 IMAGE := $(REGISTRY)/$(BIN)
 
-# This version-strategy uses git tags to set the version string
+# This version-strategy uses git tags to set the version string.
 VERSION := $(shell git describe --tags --always --dirty)
 
+MAIN := ./cmd/git-ops-update
+TEST := ./internal
+
 run:
-	go run ./src
+	go run $(MAIN)
 
 build:
 	mkdir -p build/
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/git-ops-update-linux-amd64 ./src
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/git-ops-update-darwin-amd64 ./src
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/git-ops-update-windows-amd64.exe ./src
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/git-ops-update-linux-amd64 $(MAIN)
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/git-ops-update-darwin-amd64 $(MAIN)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o build/git-ops-update-windows-amd64.exe $(MAIN)
 
 test:
-	go test -v ./src
+	go test -v $(TEST)
 
 test-watch:
-	watch -n1 go test -v ./src
+	watch -n1 go test -v $(TEST)
 
 test-cover:
-	go test -coverprofile=coverage.out
+	go test -coverprofile=coverage.out $(TEST)
 	go tool cover -func=coverage.out
 	go tool cover -html=coverage.out
 

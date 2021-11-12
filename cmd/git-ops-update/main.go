@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/choffmeister/git-ops-update/internal"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,7 +29,7 @@ func Run(dir string, opts UpdateVersionsOptions) error {
 	if err != nil {
 		return err
 	}
-	config, registries, policies, err := LoadGitOpsUpdaterConfig(configRaw)
+	config, registries, policies, err := internal.LoadGitOpsUpdaterConfig(configRaw)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func Run(dir string, opts UpdateVersionsOptions) error {
 			return err
 		}
 
-		err = VisitAnnotations(&fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, parentNodes []*yaml.Node, annotation string) error {
+		err = internal.VisitAnnotations(&fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, parentNodes []*yaml.Node, annotation string) error {
 			segments := strings.Split(annotation, ":")
 
 			registryName := segments[0]
@@ -79,7 +80,7 @@ func Run(dir string, opts UpdateVersionsOptions) error {
 			if len(segments) >= 4 {
 				formatName = segments[3]
 			}
-			format, err := GetFormat(formatName)
+			format, err := internal.GetFormat(formatName)
 			if err != nil {
 				return err
 			}
