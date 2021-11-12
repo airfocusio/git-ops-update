@@ -14,8 +14,14 @@ type CacheResource struct {
 	Timestamp    time.Time `yaml:"timestamp"`
 }
 
+type CacheAction struct {
+	Identifier string    `yaml:"identifier"`
+	Timestamp  time.Time `yaml:"timestamp"`
+}
+
 type Cache struct {
 	Resources []CacheResource `yaml:"resources"`
+	Actions   []CacheAction   `yaml:"actions"`
 }
 
 func LoadCache(bytes []byte) (*Cache, error) {
@@ -38,7 +44,7 @@ func SaveCache(cache Cache) (*[]byte, error) {
 func LoadCacheFromFile(file string) (*Cache, error) {
 	cacheRaw, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return &Cache{}, nil
 	}
 	cache, err := LoadCache(cacheRaw)
 	if err != nil {
@@ -69,12 +75,14 @@ func (c Cache) UpdateResource(r CacheResource) Cache {
 		if r2.RegistryName == r.RegistryName && r2.ResourceName == r.ResourceName {
 			return Cache{
 				Resources: append(c.Resources[:i], append([]CacheResource{r}, c.Resources[i+1:]...)...),
+				Actions:   c.Actions,
 			}
 		}
 	}
 
 	return Cache{
 		Resources: append(c.Resources, r),
+		Actions:   c.Actions,
 	}
 }
 
@@ -85,4 +93,29 @@ func (c Cache) FindResource(registryName string, resourceName string) *CacheReso
 		}
 	}
 	return nil
+}
+
+func (c Cache) AddAction(identifier string) Cache {
+	for i, a := range c.Actions {
+		if a.Identifier == identifier {
+			return Cache{
+				Resources: c.Resources,
+				Actions:   append(c.Actions[:i], append([]CacheAction{CacheAction{Identifier: identifier, Timestamp: time.Now()}}, c.Actions[i+1:]...)...),
+			}
+		}
+	}
+
+	return Cache{
+		Resources: c.Resources,
+		Actions:   append(c.Actions, CacheAction{Identifier: identifier, Timestamp: time.Now()}),
+	}
+}
+
+func (c Cache) HasAction(identifier string) bool {
+	for _, a := range c.Actions {
+		if a.Identifier == identifier {
+			return true
+		}
+	}
+	return false
 }

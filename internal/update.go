@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
 	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
-		cache = &Cache{}
+		return err
 	}
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
@@ -25,16 +26,22 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 		return err
 	}
 
+	changes := []Change{}
 	for _, file := range *files {
-		log.Printf("Scanning file %s\n", file)
+		fileRel, err := filepath.Rel(dir, file)
+		if err != nil {
+			return err
+		}
+		log.Printf("Scanning file %s\n", fileRel)
+
 		fileDoc := &yaml.Node{}
-		err := fileReadYaml(file, fileDoc)
+		err = fileReadYaml(file, fileDoc)
 		if err != nil {
 			return err
 		}
 
-		err = VisitAnnotations(fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error {
-			registryName, registry, resourceName, _, policy, format, err := parseAnnotation(*valueNode, annotation, config)
+		err = VisitAnnotations(fileDoc, "git-ops-update", func(trace yamlTrace, yamlNode *yaml.Node, annotation string) error {
+			registryName, registry, resourceName, _, policy, format, err := parseAnnotation(*yamlNode, annotation, config)
 			if err != nil {
 				return err
 			}
@@ -62,7 +69,7 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 				availableVersions = cachedResource.Versions
 			}
 
-			currentValue := valueNode.Value
+			currentValue := yamlNode.Value
 			currentVersion, err := (*format).ExtractVersion(currentValue)
 			if err != nil {
 				return err
@@ -73,12 +80,27 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 			}
 
 			if *currentVersion != *nextVersion {
-				log.Printf("Update for %s/%s from %s to %s\n", *registryName, *resourceName, *currentVersion, *nextVersion)
+				traceStr := ""
+				for _, e := range trace {
+					s, ok := e.(string)
+					if ok {
+						traceStr = traceStr + "." + s
+					}
+				}
 				nextValue, err := (*format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
 					return err
 				}
-				valueNode.Value = *nextValue
+				changes = append(changes, Change{
+					RegistryName: *registryName,
+					ResourceName: *resourceName,
+					OldVersion:   *currentVersion,
+					NewVersion:   *nextVersion,
+					File:         fileRel,
+					Trace:        trace,
+					OldValue:     currentValue,
+					NewValue:     *nextValue,
+				})
 			}
 
 			return nil
@@ -86,9 +108,27 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 		if err != nil {
 			return err
 		}
+	}
 
+	for _, c := range changes {
+		identifier := c.File + "#" + yamlTraceToString(c.Trace) + "#" + c.NewValue
+		if cache.HasAction(identifier) {
+			log.Printf("Skipping update resource %s/%s from %s to %s at %s#%s\n", c.RegistryName, c.ResourceName, c.OldVersion, c.NewVersion, c.File, yamlTraceToString(c.Trace))
+			continue
+		}
+
+		log.Printf("Update resource %s/%s from %s to %s at %s#%s\n", c.RegistryName, c.ResourceName, c.OldVersion, c.NewVersion, c.File, yamlTraceToString(c.Trace))
 		if !opts.Dry {
-			fileWriteYaml(file, fileDoc)
+			err := config.Git.Provider.Apply(dir, []Change{c})
+			if err != nil {
+				return err
+			}
+			nextCache := cache.AddAction(identifier)
+			cache = &nextCache
+			err = SaveCacheToFile(*cache, cacheFile)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

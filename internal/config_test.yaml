@@ -40,3 +40,8 @@ policies:
         pinMinor: yes
         pinPatch: yes
         allowPrereleases: yes
+git:
+  gitHub:
+    owner: owner
+    repo: repo
+    accessToken: access_token

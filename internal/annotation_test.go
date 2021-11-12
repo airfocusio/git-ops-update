@@ -17,7 +17,7 @@ foo:
 	doc := &yaml.Node{}
 	err := readYaml([]byte(input), doc)
 	if assert.NoError(t, err) {
-		err = VisitAnnotations(doc, "append", func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error {
+		err = VisitAnnotations(doc, "append", func(trace yamlTrace, valueNode *yaml.Node, annotation string) error {
 			valueNode.Value = valueNode.Value + annotation
 			return nil
 		})

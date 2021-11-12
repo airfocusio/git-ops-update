@@ -62,10 +62,21 @@ type RawConfigPolicy struct {
 	Extracts []RawConfigPolicyExtract `mapstructure:"extracts"`
 }
 
+type RawConfigGitGitHub struct {
+	Owner       string `mapstructure:"owner"`
+	Repo        string `mapstructure:"repo"`
+	AccessToken string `mapstructure:"accessToken"`
+}
+
+type RawConfigGit struct {
+	GitHub *RawConfigGitGitHub `mapstructure:"gitHub"`
+}
+
 type RawConfig struct {
 	Files      RawConfigFiles               `mapstructure:"files"`
 	Registries map[string]RawConfigRegistry `mapstructure:"registries"`
 	Policies   map[string]RawConfigPolicy   `mapstructure:"policies"`
+	Git        RawConfigGit                 `mapstructure:"git"`
 }
 
 type ConfigFiles struct {
@@ -77,6 +88,7 @@ type Config struct {
 	Files      ConfigFiles
 	Registries map[string]Registry
 	Policies   map[string]Policy
+	Git        Git
 }
 
 func LoadConfig(viperInst viper.Viper) (*Config, error) {
@@ -168,6 +180,17 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 		}
 	}
 
+	git := Git{}
+	if config.Git.GitHub != nil {
+		git.Provider = GitHubGitProvider{
+			Owner:       config.Git.GitHub.Owner,
+			Repo:        config.Git.GitHub.Repo,
+			AccessToken: config.Git.GitHub.AccessToken,
+		}
+	} else {
+		git.Provider = LocalGitProvider{}
+	}
+
 	return &Config{
 		Files: ConfigFiles{
 			Includes: fileIncludes,
@@ -175,5 +198,6 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 		},
 		Registries: registries,
 		Policies:   policies,
+		Git:        git,
 	}, nil
 }

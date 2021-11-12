@@ -81,9 +81,17 @@ func TestLoadConfig(t *testing.T) {
 				},
 			},
 		},
+		Git: Git{
+			Provider: GitHubGitProvider{
+				Owner:       "owner",
+				Repo:        "repo",
+				AccessToken: "access_token",
+			},
+		},
 	}
 
 	assert.Equal(t, c2.Files, c1.Files)
 	assert.Equal(t, c2.Registries, c1.Registries)
 	assert.Equal(t, c2.Policies, c1.Policies)
+	assert.Equal(t, c2.Git, c1.Git)
 }

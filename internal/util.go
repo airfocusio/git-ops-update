@@ -1,13 +1,10 @@
 package internal
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
-
-	"gopkg.in/yaml.v3"
 )
 
 func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*[]string, error) {
@@ -69,16 +66,4 @@ func fileWriteYaml(file string, v interface{}) error {
 		return err
 	}
 	return nil
-}
-
-func readYaml(bytes []byte, v interface{}) error {
-	return yaml.Unmarshal(bytes, v)
-}
-
-func writeYaml(v interface{}) ([]byte, error) {
-	var bs bytes.Buffer
-	enc := yaml.NewEncoder(&bs)
-	enc.SetIndent(2)
-	err := enc.Encode(v)
-	return bs.Bytes(), err
 }
