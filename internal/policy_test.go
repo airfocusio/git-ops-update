@@ -138,7 +138,13 @@ func TestLexicographicSortStrategyCompare(t *testing.T) {
 	assert.Equal(t, 1, str.Compare("2", "10"))
 	assert.Equal(t, 1, str.Compare("10", "1"))
 	assert.Equal(t, -1, str.Compare("10", "2"))
+}
 
+func TestLexicographicSortStrategyIsCompatible(t *testing.T) {
+	assert.Equal(t, true, LexicographicExtractStrategy{}.IsCompatible("1", "1"))
+	assert.Equal(t, true, LexicographicExtractStrategy{}.IsCompatible("1", "2"))
+	assert.Equal(t, true, LexicographicExtractStrategy{Pin: true}.IsCompatible("1", "1"))
+	assert.Equal(t, false, LexicographicExtractStrategy{Pin: true}.IsCompatible("1", "2"))
 }
 
 func TestNumericSortStrategyCompare(t *testing.T) {
@@ -154,6 +160,13 @@ func TestNumericSortStrategyCompare(t *testing.T) {
 	assert.Equal(t, -1, str.Compare("2", "10"))
 	assert.Equal(t, 1, str.Compare("10", "1"))
 	assert.Equal(t, 1, str.Compare("10", "2"))
+}
+
+func TestNumericSortStrategyIsCompatible(t *testing.T) {
+	assert.Equal(t, true, NumericExtractStrategy{}.IsCompatible("1", "1"))
+	assert.Equal(t, true, NumericExtractStrategy{}.IsCompatible("1", "2"))
+	assert.Equal(t, true, NumericExtractStrategy{Pin: true}.IsCompatible("1", "1"))
+	assert.Equal(t, false, NumericExtractStrategy{Pin: true}.IsCompatible("1", "2"))
 }
 
 func TestSemverSortStrategyCompare(t *testing.T) {
@@ -182,13 +195,17 @@ func TestSemverSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "1.1.0"))
 	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true}.IsCompatible("1.0.0", "2.0.0"))
 
-	assert.Equal(t, true, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.0.0"))
-	assert.Equal(t, true, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.0.1"))
-	assert.Equal(t, false, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "1.1.0"))
-	assert.Equal(t, false, SemverExtractStrategy{PinMinor: true}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true, PinMinor: true}.IsCompatible("1.0.0", "1.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true, PinMinor: true}.IsCompatible("1.0.0", "1.0.1"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true, PinMinor: true}.IsCompatible("1.0.0", "1.1.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true, PinMinor: true}.IsCompatible("1.0.0", "2.0.0"))
 
-	assert.Equal(t, true, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.0.0"))
-	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.0.1"))
-	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "1.1.0"))
-	assert.Equal(t, false, SemverExtractStrategy{PinPatch: true}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{PinMajor: true, PinMinor: true, PinPatch: true}.IsCompatible("1.0.0", "1.0.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true, PinMinor: true, PinPatch: true}.IsCompatible("1.0.0", "1.0.1"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true, PinMinor: true, PinPatch: true}.IsCompatible("1.0.0", "1.1.0"))
+	assert.Equal(t, false, SemverExtractStrategy{PinMajor: true, PinMinor: true, PinPatch: true}.IsCompatible("1.0.0", "2.0.0"))
+
+	assert.Equal(t, false, SemverExtractStrategy{AllowPrereleases: false}.IsCompatible("1.0.0", "2.0.0-pre"))
+	assert.Equal(t, true, SemverExtractStrategy{AllowPrereleases: false}.IsCompatible("1.0.0", "2.0.0"))
+	assert.Equal(t, true, SemverExtractStrategy{AllowPrereleases: true}.IsCompatible("1.0.0", "2.0.0-pre"))
 }

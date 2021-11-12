@@ -26,9 +26,11 @@ type ExtractStrategy interface {
 }
 
 type LexicographicExtractStrategy struct {
+	Pin bool
 }
 
 type NumericExtractStrategy struct {
+	Pin bool
 }
 
 type SemverExtractStrategy struct {
@@ -160,7 +162,7 @@ func (str LexicographicExtractStrategy) Compare(v1 string, v2 string) int {
 }
 
 func (str LexicographicExtractStrategy) IsCompatible(v1 string, v2 string) bool {
-	return true
+	return !str.Pin || v1 == v2
 }
 
 func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
@@ -185,7 +187,7 @@ func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 }
 
 func (str NumericExtractStrategy) IsCompatible(v1 string, v2 string) bool {
-	return true
+	return !str.Pin || v1 == v2
 }
 
 func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
@@ -207,6 +209,9 @@ func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 		return false
 	}
 	if str.PinPatch && (v1sv.Major != v2sv.Major || v1sv.Minor != v2sv.Minor || v1sv.Patch != v2sv.Patch) {
+		return false
+	}
+	if !str.AllowPrereleases && len(v2sv.Pre) > 0 {
 		return false
 	}
 	return true

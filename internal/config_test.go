@@ -33,17 +33,23 @@ policies:
     pattern: '^(?P<all>.*)$'
     extracts:
     - value: '<all>'
-      lexicographic: {}
+      lexicographic:
+        pin: yes
   numeric:
     pattern: '^(?P<all>.*)$'
     extracts:
     - value: '<all>'
-      numeric: {}
+      numeric:
+        pin: yes
   semver:
     pattern: '^(?P<all>.*)$'
     extracts:
     - value: '<all>'
-      semver: {}
+      semver:
+        pinMajor: yes
+        pinMinor: yes
+        pinPatch: yes
+        allowPrereleases: yes
 `
 
 	c1, err := LoadGitOpsUpdaterConfig([]byte(yaml))
@@ -79,8 +85,10 @@ policies:
 				Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
 				Extracts: []Extract{
 					{
-						Value:    "<all>",
-						Strategy: LexicographicExtractStrategy{},
+						Value: "<all>",
+						Strategy: LexicographicExtractStrategy{
+							Pin: true,
+						},
 					},
 				},
 			},
@@ -88,8 +96,10 @@ policies:
 				Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
 				Extracts: []Extract{
 					{
-						Value:    "<all>",
-						Strategy: NumericExtractStrategy{},
+						Value: "<all>",
+						Strategy: NumericExtractStrategy{
+							Pin: true,
+						},
 					},
 				},
 			},
@@ -97,8 +107,13 @@ policies:
 				Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
 				Extracts: []Extract{
 					{
-						Value:    "<all>",
-						Strategy: SemverExtractStrategy{},
+						Value: "<all>",
+						Strategy: SemverExtractStrategy{
+							PinMajor:         true,
+							PinMinor:         true,
+							PinPatch:         true,
+							AllowPrereleases: true,
+						},
 					},
 				},
 			},

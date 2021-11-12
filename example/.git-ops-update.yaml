@@ -17,11 +17,14 @@ policies:
     pattern: '^(?P<all>.*)$'
     extracts:
       - value: '<all>'
-        semver: {}
+        semver:
+          pinMajor: yes
+          pinMinor: yes
   ubuntu:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:
       - value: '<year>'
-        numeric: {}
+        numeric:
+          pin: yes
       - value: '<month>'
         numeric: {}

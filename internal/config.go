@@ -139,11 +139,20 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 		extracts := []Extract{}
 		for ei, e := range p.Extracts {
 			if e.Lexicographic != nil {
-				extracts = append(extracts, Extract{Value: e.Value, Strategy: LexicographicExtractStrategy{}})
+				extracts = append(extracts, Extract{Value: e.Value, Strategy: LexicographicExtractStrategy{
+					Pin: e.Lexicographic.Pin,
+				}})
 			} else if e.Numeric != nil {
-				extracts = append(extracts, Extract{Value: e.Value, Strategy: NumericExtractStrategy{}})
+				extracts = append(extracts, Extract{Value: e.Value, Strategy: NumericExtractStrategy{
+					Pin: e.Numeric.Pin,
+				}})
 			} else if e.Semver != nil {
-				extracts = append(extracts, Extract{Value: e.Value, Strategy: SemverExtractStrategy{}})
+				extracts = append(extracts, Extract{Value: e.Value, Strategy: SemverExtractStrategy{
+					PinMajor:         e.Semver.PinMajor,
+					PinMinor:         e.Semver.PinMinor,
+					PinPatch:         e.Semver.PinPatch,
+					AllowPrereleases: e.Semver.AllowPrereleases,
+				}})
 			} else {
 				return nil, fmt.Errorf("policy %s strategy %d is invalid", pn, ei)
 			}
