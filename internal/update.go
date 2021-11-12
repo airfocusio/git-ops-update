@@ -10,22 +10,14 @@ import (
 )
 
 type UpdateVersionsOptions struct {
-	Dry        bool
-	ConfigFile string
-	CacheFile  string
+	Dry bool
 }
 
-func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
-	configFile := fileResolvePath(dir, opts.ConfigFile)
-	config, err := LoadGitOpsUpdaterConfigFromFile(configFile)
+func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error {
+	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
+	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
-		return err
-	}
-
-	cacheFile := fileResolvePath(dir, opts.CacheFile)
-	cache, err := LoadGitOpsUpdaterCacheFromFile(cacheFile)
-	if err != nil {
-		cache = &GitOpsUpdaterCache{}
+		cache = &Cache{}
 	}
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
@@ -42,7 +34,7 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 		}
 
 		err = VisitAnnotations(fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error {
-			registryName, registry, resourceName, _, policy, format, err := parseAnnotation(*valueNode, annotation, *config)
+			registryName, registry, resourceName, _, policy, format, err := parseAnnotation(*valueNode, annotation, config)
 			if err != nil {
 				return err
 			}
@@ -55,14 +47,14 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 					return err
 				}
 				availableVersions = *versions
-				nextCache := cache.UpdateResource(GitOpsUpdaterCacheResource{
+				nextCache := cache.UpdateResource(CacheResource{
 					RegistryName: *registryName,
 					ResourceName: *resourceName,
 					Versions:     availableVersions,
 					Timestamp:    time.Now(),
 				})
 				cache = &nextCache
-				err = SaveGitOpsUpdaterCacheToFile(*cache, cacheFile)
+				err = SaveCacheToFile(*cache, cacheFile)
 				if err != nil {
 					return err
 				}
@@ -103,7 +95,7 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 	return nil
 }
 
-func parseAnnotation(valueNode yaml.Node, annotation string, config GitOpsUpdaterConfig) (*string, *Registry, *string, *string, *Policy, *Format, error) {
+func parseAnnotation(valueNode yaml.Node, annotation string, config Config) (*string, *Registry, *string, *string, *Policy, *Format, error) {
 	segments := strings.Split(annotation, ":")
 
 	registryName := segments[0]

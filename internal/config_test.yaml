@@ -1,0 +1,42 @@
+definitions:
+  creds: &creds
+    username: user
+    password: pass
+files:
+  includes:
+  - '\.yaml$'
+  excludes:
+  - '\.generated\.yaml$'
+registries:
+  docker:
+    interval: 1m
+    docker:
+      url: https://registry-1.docker.io
+      credentials: *creds
+  helm:
+    interval: 1h
+    helm:
+      url: https://charts.helm.sh/stable
+      credentials: *creds
+policies:
+  lexicographic:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      lexicographic:
+        pin: yes
+  numeric:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      numeric:
+        pin: yes
+  semver:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      semver:
+        pinMajor: yes
+        pinMinor: yes
+        pinPatch: yes
+        allowPrereleases: yes

@@ -3,68 +3,31 @@ package internal
 import (
 	"regexp"
 	"testing"
+	"time"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadGitOpsUpdaterConfig(t *testing.T) {
-	yaml := `definitions:
-  creds: &creds
-    username: user
-    password: pass
-files:
-  includes:
-  - '\.yaml$'
-  excludes:
-  - '\.generated\.yaml$'
-registries:
-  docker:
-    interval: 1m
-    docker:
-      url: https://registry-1.docker.io
-      credentials: *creds
-  helm:
-    interval: 1h
-    helm:
-      url: https://charts.helm.sh/stable
-      credentials: *creds
-policies:
-  lexicographic:
-    pattern: '^(?P<all>.*)$'
-    extracts:
-    - value: '<all>'
-      lexicographic:
-        pin: yes
-  numeric:
-    pattern: '^(?P<all>.*)$'
-    extracts:
-    - value: '<all>'
-      numeric:
-        pin: yes
-  semver:
-    pattern: '^(?P<all>.*)$'
-    extracts:
-    - value: '<all>'
-      semver:
-        pinMajor: yes
-        pinMinor: yes
-        pinPatch: yes
-        allowPrereleases: yes
-`
+func TestLoadConfig(t *testing.T) {
+	viperInstance := viper.New()
+	viperInstance.SetConfigName("config_test.yaml")
+	viperInstance.SetConfigType("yaml")
+	viperInstance.AddConfigPath(".")
+	err := viperInstance.ReadInConfig()
+	assert.NoError(t, err)
 
-	c1, err := LoadGitOpsUpdaterConfig([]byte(yaml))
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	c2 := GitOpsUpdaterConfig{
-		Files: GitOpsUpdaterConfigFiles{
+	c1, err := LoadConfig(*viperInstance)
+	assert.NoError(t, err)
+
+	c2 := Config{
+		Files: ConfigFiles{
 			Includes: []regexp.Regexp{*regexp.MustCompile(`\.yaml$`)},
 			Excludes: []regexp.Regexp{*regexp.MustCompile(`\.generated\.yaml$`)},
 		},
 		Registries: map[string]Registry{
 			"docker": DockerRegistry{
-				Interval: Duration(60000000000),
+				Interval: time.Duration(60000000000),
 				Url:      "https://registry-1.docker.io",
 				Credentials: HttpBasicCredentials{
 					Username: "user",
@@ -72,7 +35,7 @@ policies:
 				},
 			},
 			"helm": HelmRegistry{
-				Interval: Duration(3600000000000),
+				Interval: time.Duration(3600000000000),
 				Url:      "https://charts.helm.sh/stable",
 				Credentials: HttpBasicCredentials{
 					Username: "user",
@@ -119,7 +82,8 @@ policies:
 			},
 		},
 	}
-	assert.Equal(t, c1.Files, c2.Files)
-	assert.Equal(t, c1.Registries, c2.Registries)
-	assert.Equal(t, c1.Policies, c2.Policies)
+
+	assert.Equal(t, c2.Files, c1.Files)
+	assert.Equal(t, c2.Registries, c1.Registries)
+	assert.Equal(t, c2.Policies, c1.Policies)
 }

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/heroku/docker-registry-client/registry"
 )
@@ -15,23 +16,23 @@ type HttpBasicCredentials struct {
 }
 
 type Registry interface {
-	GetInterval() Duration
+	GetInterval() time.Duration
 	FetchVersions(resource string) (*[]string, error)
 }
 
 type DockerRegistry struct {
-	Interval    Duration
+	Interval    time.Duration
 	Url         string
 	Credentials HttpBasicCredentials
 }
 
 type HelmRegistry struct {
-	Interval    Duration
+	Interval    time.Duration
 	Url         string
 	Credentials HttpBasicCredentials
 }
 
-func (r DockerRegistry) GetInterval() Duration {
+func (r DockerRegistry) GetInterval() time.Duration {
 	return r.Interval
 }
 
@@ -64,7 +65,7 @@ type helmRegistryIndex struct {
 	} `yaml:"entries"`
 }
 
-func (r HelmRegistry) GetInterval() Duration {
+func (r HelmRegistry) GetInterval() time.Duration {
 	return r.Interval
 }
 

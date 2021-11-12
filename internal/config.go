@@ -1,93 +1,88 @@
 package internal
 
 import (
-	utiljson "encoding/json"
 	"fmt"
-	"io/ioutil"
 	"regexp"
+	"time"
 
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/viper"
 )
 
-type GitOpsUpdaterConfigRawHttpCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+type RawConfigHttpCredentials struct {
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
-type GitOpsUpdaterConfigRawFiles struct {
-	Includes []string `json:"includes"`
-	Excludes []string `json:"excludes"`
+type RawConfigFiles struct {
+	Includes []string `mapstructure:"includes"`
+	Excludes []string `mapstructure:"excludes"`
 }
 
-type GitOpsUpdaterConfigRawRegistryDocker struct {
-	Url         string                                `json:"url"`
-	Credentials GitOpsUpdaterConfigRawHttpCredentials `json:"credentials"`
+type RawConfigRegistryDocker struct {
+	Url         string                   `mapstructure:"url"`
+	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
 }
 
-type GitOpsUpdaterConfigRawRegistryHelm struct {
-	Url         string                                `json:"url"`
-	Credentials GitOpsUpdaterConfigRawHttpCredentials `json:"credentials"`
+type RawConfigRegistryHelm struct {
+	Url         string                   `mapstructure:"url"`
+	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
 }
 
-type GitOpsUpdaterConfigRawRegistry struct {
-	Interval Duration                              `json:"interval"`
-	Docker   *GitOpsUpdaterConfigRawRegistryDocker `json:"docker"`
-	Helm     *GitOpsUpdaterConfigRawRegistryHelm   `json:"helm"`
+type RawConfigRegistry struct {
+	Interval time.Duration            `mapstructure:"interval"`
+	Docker   *RawConfigRegistryDocker `mapstructure:"docker"`
+	Helm     *RawConfigRegistryHelm   `mapstructure:"helm"`
 }
 
-type GitOpsUpdaterConfigRawPolicyExtractLexicographicStrategy struct {
-	Pin bool `json:"pin"`
+type RawConfigPolicyExtractLexicographicStrategy struct {
+	Pin bool `mapstructure:"pin"`
 }
 
-type GitOpsUpdaterConfigRawPolicyExtractNumericStrategyConfig struct {
-	Pin bool `json:"pin"`
+type RawConfigPolicyExtractNumericStrategyConfig struct {
+	Pin bool `mapstructure:"pin"`
 }
 
-type GitOpsUpdaterConfigRawPolicyExtractSemverStrategy struct {
-	PinMajor         bool `json:"pinMajor"`
-	PinMinor         bool `json:"pinMinor"`
-	PinPatch         bool `json:"pinPatch"`
-	AllowPrereleases bool `json:"allowPrereleases"`
+type RawConfigPolicyExtractSemverStrategy struct {
+	PinMajor         bool `mapstructure:"pinMajor"`
+	PinMinor         bool `mapstructure:"pinMinor"`
+	PinPatch         bool `mapstructure:"pinPatch"`
+	AllowPrereleases bool `mapstructure:"allowPrereleases"`
 }
 
-type GitOpsUpdaterConfigRawPolicyExtract struct {
-	Value         string                                                    `json:"value"`
-	Lexicographic *GitOpsUpdaterConfigRawPolicyExtractLexicographicStrategy `json:"lexicographic"`
-	Numeric       *GitOpsUpdaterConfigRawPolicyExtractNumericStrategyConfig `json:"numeric"`
-	Semver        *GitOpsUpdaterConfigRawPolicyExtractSemverStrategy        `json:"semver"`
+type RawConfigPolicyExtract struct {
+	Value         string                                       `mapstructure:"value"`
+	Lexicographic *RawConfigPolicyExtractLexicographicStrategy `mapstructure:"lexicographic"`
+	Numeric       *RawConfigPolicyExtractNumericStrategyConfig `mapstructure:"numeric"`
+	Semver        *RawConfigPolicyExtractSemverStrategy        `mapstructure:"semver"`
 }
 
-type GitOpsUpdaterConfigRawPolicy struct {
-	Pattern  string                                `json:"pattern"`
-	Extracts []GitOpsUpdaterConfigRawPolicyExtract `json:"extracts"`
+type RawConfigPolicy struct {
+	Pattern  string                   `mapstructure:"pattern"`
+	Extracts []RawConfigPolicyExtract `mapstructure:"extracts"`
 }
 
-type GitOpsUpdaterConfigRaw struct {
-	Files      GitOpsUpdaterConfigRawFiles               `json:"files"`
-	Registries map[string]GitOpsUpdaterConfigRawRegistry `json:"registries"`
-	Policies   map[string]GitOpsUpdaterConfigRawPolicy   `json:"policies"`
+type RawConfig struct {
+	Files      RawConfigFiles               `mapstructure:"files"`
+	Registries map[string]RawConfigRegistry `mapstructure:"registries"`
+	Policies   map[string]RawConfigPolicy   `mapstructure:"policies"`
 }
 
-type GitOpsUpdaterConfigFiles struct {
+type ConfigFiles struct {
 	Includes []regexp.Regexp
 	Excludes []regexp.Regexp
 }
 
-type GitOpsUpdaterConfig struct {
-	Files      GitOpsUpdaterConfigFiles
+type Config struct {
+	Files      ConfigFiles
 	Registries map[string]Registry
 	Policies   map[string]Policy
 }
 
-func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
-	config := &GitOpsUpdaterConfigRaw{}
-
-	json, err := utilyaml.ToJSON(yaml)
+func LoadConfig(viperInst viper.Viper) (*Config, error) {
+	config := &RawConfig{}
+	err := viperInst.Unmarshal(&config, viper.DecodeHook(mapstructure.StringToTimeDurationHookFunc()))
 	if err != nil {
-		return nil, err
-	}
-
-	if err = utiljson.Unmarshal(json, config); err != nil {
 		return nil, err
 	}
 
@@ -173,24 +168,12 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 		}
 	}
 
-	return &GitOpsUpdaterConfig{
-		Files: GitOpsUpdaterConfigFiles{
+	return &Config{
+		Files: ConfigFiles{
 			Includes: fileIncludes,
 			Excludes: fileExcludes,
 		},
 		Registries: registries,
 		Policies:   policies,
 	}, nil
-}
-
-func LoadGitOpsUpdaterConfigFromFile(file string) (*GitOpsUpdaterConfig, error) {
-	configRaw, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	config, err := LoadGitOpsUpdaterConfig(configRaw)
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
 }
