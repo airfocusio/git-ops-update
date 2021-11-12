@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func visitAnnotationsRecursion(parentNodes []*yaml.Node, node *yaml.Node, identifier string, fn func(keyNode *yaml.Node, valueNode *yaml.Node, parentNodes []*yaml.Node, annotation string) error) error {
+func visitAnnotationsRecursion(trace []string, node *yaml.Node, identifier string, fn func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error) error {
 	if node.Kind == yaml.MappingNode {
 		for i := 0; i < len(node.Content); i += 2 {
 			keyNode := node.Content[i]
@@ -18,13 +18,13 @@ func visitAnnotationsRecursion(parentNodes []*yaml.Node, node *yaml.Node, identi
 				utiljson.Unmarshal([]byte(annotationStr), &annotationJson)
 				annotation, ok := annotationJson["$"+identifier].(string)
 				if ok {
-					err := fn(keyNode, valueNode, []*yaml.Node{}, annotation)
+					err := fn(keyNode, valueNode, append(trace, keyNode.Value), annotation)
 					if err != nil {
 						return err
 					}
 				}
 			} else {
-				err := visitAnnotationsRecursion(append(parentNodes, node), valueNode, identifier, fn)
+				err := visitAnnotationsRecursion(append(trace, keyNode.Value), valueNode, identifier, fn)
 				if err != nil {
 					return err
 				}
@@ -32,7 +32,7 @@ func visitAnnotationsRecursion(parentNodes []*yaml.Node, node *yaml.Node, identi
 		}
 	} else {
 		for _, child := range node.Content {
-			err := visitAnnotationsRecursion(append(parentNodes, node), child, identifier, fn)
+			err := visitAnnotationsRecursion(trace, child, identifier, fn)
 			if err != nil {
 				return err
 			}
@@ -41,6 +41,6 @@ func visitAnnotationsRecursion(parentNodes []*yaml.Node, node *yaml.Node, identi
 	return nil
 }
 
-func VisitAnnotations(node *yaml.Node, identifier string, fn func(keyNode *yaml.Node, valueNode *yaml.Node, parentNodes []*yaml.Node, annotation string) error) error {
-	return visitAnnotationsRecursion([]*yaml.Node{}, node, identifier, fn)
+func VisitAnnotations(node *yaml.Node, identifier string, fn func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error) error {
+	return visitAnnotationsRecursion([]string{}, node, identifier, fn)
 }

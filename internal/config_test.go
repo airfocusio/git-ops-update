@@ -15,35 +15,35 @@ files:
   excludes:
   - '**/*.generated.yaml'
 registries:
-- name: docker
-  interval: 1m
   docker:
-    url: https://registry-1.docker.io
-    credentials: *creds
-- name: helm
-  interval: 1h
+    interval: 1m
+    docker:
+      url: https://registry-1.docker.io
+      credentials: *creds
   helm:
-    url: https://charts.helm.sh/stable
-    credentials: *creds
+    interval: 1h
+    helm:
+      url: https://charts.helm.sh/stable
+      credentials: *creds
 policies:
-- name: lexicographic
-  pattern: '^(?P<all>.*)$'
-  extracts:
-  - value: '<all>'
-    lexicographic: {}
-- name: numeric
-  pattern: '^(?P<all>.*)$'
-  extracts:
-  - value: '<all>'
-    numeric: {}
-- name: semver
-  pattern: '^(?P<all>.*)$'
-  extracts:
-  - value: '<all>'
-    semver: {}
+  lexicographic:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      lexicographic: {}
+  numeric:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      numeric: {}
+  semver:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      semver: {}
 `
 
-	c1, r1, p1, err := LoadGitOpsUpdaterConfig([]byte(yaml))
+	c1, err := LoadGitOpsUpdaterConfig([]byte(yaml))
 	if err != nil {
 		t.Error(err)
 		return
@@ -53,9 +53,8 @@ policies:
 			Includes: []string{"**/*.yaml"},
 			Excludes: []string{"**/*.generated.yaml"},
 		},
-		RegistryConfigs: []RegistryConfig{
-			{
-				Name:     "docker",
+		RegistryConfigs: map[string]RegistryConfig{
+			"docker": {
 				Interval: Duration(60000000000),
 				Docker: &RegistryConfigDocker{
 					Url: "https://registry-1.docker.io",
@@ -65,8 +64,7 @@ policies:
 					},
 				},
 			},
-			{
-				Name:     "helm",
+			"helm": {
 				Interval: Duration(3600000000000),
 				Helm: &RegistryConfigHelm{
 					Url: "https://charts.helm.sh/stable",
@@ -77,9 +75,8 @@ policies:
 				},
 			},
 		},
-		PolicyConfigs: []PolicyConfig{
-			{
-				Name:    "lexicographic",
+		PolicyConfigs: map[string]PolicyConfig{
+			"lexicographic": {
 				Pattern: "^(?P<all>.*)$",
 				Extracts: []ExtractConfig{
 					{
@@ -88,8 +85,7 @@ policies:
 					},
 				},
 			},
-			{
-				Name:    "numeric",
+			"numeric": {
 				Pattern: "^(?P<all>.*)$",
 				Extracts: []ExtractConfig{
 					{
@@ -98,8 +94,7 @@ policies:
 					},
 				},
 			},
-			{
-				Name:    "semver",
+			"semver": {
 				Pattern: "^(?P<all>.*)$",
 				Extracts: []ExtractConfig{
 					{
@@ -116,29 +111,29 @@ policies:
 	}
 
 	ok := false
-	_, ok = (*r1)["docker"].(DockerRegistry)
+	_, ok = c1.Registries["docker"].(DockerRegistry)
 	if !ok {
-		t.Errorf("expected DockerRegistry, got %v", (*r1)["docker"])
+		t.Errorf("expected DockerRegistry, got %v", c1.Registries["docker"])
 		return
 	}
-	_, ok = (*r1)["helm"].(HelmRegistry)
+	_, ok = c1.Registries["helm"].(HelmRegistry)
 	if !ok {
-		t.Errorf("expected HelmRegistry, got %v", (*r1)["helm"])
+		t.Errorf("expected HelmRegistry, got %v", c1.Registries["helm"])
 		return
 	}
-	_, ok = (*p1)["lexicographic"].Extracts[0].Strategy.(LexicographicExtractStrategy)
+	_, ok = c1.Policies["lexicographic"].Extracts[0].Strategy.(LexicographicExtractStrategy)
 	if !ok {
-		t.Errorf("expected LexicographicExtractStrategy, got %v", (*p1)["lexicographic"].Extracts[0].Strategy)
+		t.Errorf("expected LexicographicExtractStrategy, got %v", c1.Policies["lexicographic"].Extracts[0].Strategy)
 		return
 	}
-	_, ok = (*p1)["numeric"].Extracts[0].Strategy.(NumericExtractStrategy)
+	_, ok = c1.Policies["numeric"].Extracts[0].Strategy.(NumericExtractStrategy)
 	if !ok {
-		t.Errorf("expected NumericExtractStrategy, got %v", (*p1)["numeric"].Extracts[0].Strategy)
+		t.Errorf("expected NumericExtractStrategy, got %v", c1.Policies["numeric"].Extracts[0].Strategy)
 		return
 	}
-	_, ok = (*p1)["semver"].Extracts[0].Strategy.(SemverExtractStrategy)
+	_, ok = c1.Policies["semver"].Extracts[0].Strategy.(SemverExtractStrategy)
 	if !ok {
-		t.Errorf("expected SemverExtractStrategy, got %v", (*p1)["semver"].Extracts[0].Strategy)
+		t.Errorf("expected SemverExtractStrategy, got %v", c1.Policies["semver"].Extracts[0].Strategy)
 		return
 	}
 }

@@ -3,25 +3,26 @@ files:
   - '*.yaml'
   excludes:
   - '.git-ops-update.yaml'
+  - '.git-ops-update.cache.yaml'
 registries:
-- name: docker
-  interval: 1h
   docker:
-    url: https://registry-1.docker.io
-- name: helm-nginx
-  interval: 1h
-  helm:
-    url: https://helm.nginx.com/stable
+    interval: 1h
+    docker:
+      url: https://registry-1.docker.io
+  helm-nginx:
+    interval: 1h
+    helm:
+      url: https://helm.nginx.com/stable
 policies:
-- name: semver
-  pattern: '^(?P<all>.*)$'
-  extracts:
-  - value: '<all>'
-    semver: {}
-- name: ubuntu
-  pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
-  extracts:
-  - value: '<year>'
-    numeric: {}
-  - value: '<month>'
-    numeric: {}
+  semver:
+    pattern: '^(?P<all>.*)$'
+    extracts:
+    - value: '<all>'
+      semver: {}
+  ubuntu:
+    pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
+    extracts:
+    - value: '<year>'
+      numeric: {}
+    - value: '<month>'
+      numeric: {}

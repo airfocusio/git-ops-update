@@ -30,20 +30,17 @@ type RegistryConfigHelm struct {
 }
 
 type RegistryConfig struct {
-	Name     string                `json:"name"`
 	Interval Duration              `json:"interval"`
 	Docker   *RegistryConfigDocker `json:"docker"`
 	Helm     *RegistryConfigHelm   `json:"helm"`
 }
 
 type DockerRegistry struct {
-	Name     string
 	Interval Duration
 	Config   *RegistryConfigDocker
 }
 
 type HelmRegistry struct {
-	Name     string
 	Interval Duration
 	Config   *RegistryConfigHelm
 }

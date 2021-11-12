@@ -15,44 +15,44 @@ type GitOpsUpdaterConfigFiles struct {
 }
 
 type GitOpsUpdaterConfig struct {
-	Files           GitOpsUpdaterConfigFiles `json:"files"`
-	RegistryConfigs []RegistryConfig         `json:"registries"`
-	PolicyConfigs   []PolicyConfig           `json:"policies"`
+	Files           GitOpsUpdaterConfigFiles  `json:"files"`
+	RegistryConfigs map[string]RegistryConfig `json:"registries"`
+	PolicyConfigs   map[string]PolicyConfig   `json:"policies"`
+	Registries      map[string]Registry
+	Policies        map[string]Policy
 }
 
-func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, *map[string]Registry, *map[string]Policy, error) {
+func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 	config := &GitOpsUpdaterConfig{}
 
 	json, err := utilyaml.ToJSON(yaml)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	if err = utiljson.Unmarshal(json, config); err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	registries := map[string]Registry{}
-	for _, r := range config.RegistryConfigs {
+	for rn, r := range config.RegistryConfigs {
 		if r.Docker != nil {
-			registries[r.Name] = DockerRegistry{
-				Name:     r.Name,
+			registries[rn] = DockerRegistry{
 				Interval: r.Interval,
 				Config:   r.Docker,
 			}
 		} else if r.Helm != nil {
-			registries[r.Name] = HelmRegistry{
-				Name:     r.Name,
+			registries[rn] = HelmRegistry{
 				Interval: r.Interval,
 				Config:   r.Helm,
 			}
 		} else {
-			return nil, nil, nil, fmt.Errorf("registry %s is invalid", r.Name)
+			return nil, fmt.Errorf("registry %s is invalid", rn)
 		}
 	}
 
 	policies := map[string]Policy{}
-	for _, p := range config.PolicyConfigs {
+	for pn, p := range config.PolicyConfigs {
 		extracts := []Extract{}
 		for ei, e := range p.Extracts {
 			if e.Lexicographic != nil {
@@ -62,27 +62,29 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, *map[string]Reg
 			} else if e.Semver != nil {
 				extracts = append(extracts, Extract{Value: e.Value, Strategy: SemverExtractStrategy{}})
 			} else {
-				return nil, nil, nil, fmt.Errorf("policy %s strategy %d is invalid", p.Name, ei)
+				return nil, fmt.Errorf("policy %s strategy %d is invalid", pn, ei)
 			}
 		}
 		if len(extracts) == 0 {
-			return nil, nil, nil, fmt.Errorf("policy %s has no extracts", p.Name)
+			return nil, fmt.Errorf("policy %s has no extracts", pn)
 		}
 		pattern, err := regexp.Compile(p.Pattern)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("policy %s pattern %s is invalid", p.Name, p.Pattern)
+			return nil, fmt.Errorf("policy %s pattern %s is invalid", pn, p.Pattern)
 		}
 		if p.Pattern == "" {
 			pattern = nil
 		}
-		policies[p.Name] = Policy{
-			Name:     p.Name,
+		policies[pn] = Policy{
 			Pattern:  pattern,
 			Extracts: extracts,
 		}
 	}
 
-	return config, &registries, &policies, nil
+	config.Registries = registries
+	config.Policies = policies
+
+	return config, nil
 }
 
 func (c1 GitOpsUpdaterConfig) Equal(c2 GitOpsUpdaterConfig) bool {

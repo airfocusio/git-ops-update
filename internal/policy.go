@@ -28,13 +28,11 @@ type ExtractConfig struct {
 }
 
 type PolicyConfig struct {
-	Name     string          `json:"name"`
 	Pattern  string          `json:"pattern"`
 	Extracts []ExtractConfig `json:"extracts"`
 }
 
 type Policy struct {
-	Name     string
 	Pattern  *regexp.Regexp
 	Extracts []Extract
 }

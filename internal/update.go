@@ -6,17 +6,19 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 type UpdateVersionsOptions struct {
-	Dry    bool
-	Config string
+	Dry        bool
+	ConfigFile string
+	CacheFile  string
 }
 
 func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
-	configFile := opts.Config
+	configFile := opts.ConfigFile
 	if !filepath.IsAbs(configFile) {
 		configFile = filepath.Join(dir, configFile)
 	}
@@ -24,9 +26,22 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 	if err != nil {
 		return err
 	}
-	config, registries, policies, err := LoadGitOpsUpdaterConfig(configRaw)
+	config, err := LoadGitOpsUpdaterConfig(configRaw)
 	if err != nil {
 		return err
+	}
+
+	cacheFile := opts.CacheFile
+	if !filepath.IsAbs(cacheFile) {
+		cacheFile = filepath.Join(dir, cacheFile)
+	}
+	cacheRaw, err := ioutil.ReadFile(cacheFile)
+	if err != nil {
+		cacheRaw = []byte("")
+	}
+	cache, err := LoadGitOpsUpdaterCache(cacheRaw)
+	if err != nil {
+		cache = &GitOpsUpdaterCache{}
 	}
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
@@ -35,7 +50,7 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 	}
 
 	for _, file := range *files {
-		log.Printf("Updating file %s\n", file)
+		log.Printf("Scanning file %s\n", file)
 
 		fileBytes, err := ioutil.ReadFile(file)
 		if err != nil {
@@ -48,14 +63,18 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 			return err
 		}
 
-		err = VisitAnnotations(&fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, parentNodes []*yaml.Node, annotation string) error {
+		err = VisitAnnotations(&fileDoc, "git-ops-update", func(keyNode *yaml.Node, valueNode *yaml.Node, trace []string, annotation string) error {
 			segments := strings.Split(annotation, ":")
 
 			registryName := segments[0]
 			if len(segments) < 2 {
 				return fmt.Errorf("line %d column %d: annotation is missing the resource", valueNode.Line, valueNode.Column)
 			}
-			registry, ok := (*registries)[registryName]
+			registry, ok := config.Registries[registryName]
+			if !ok {
+				return fmt.Errorf("line %d column %d: annotation references unknown registry %s", valueNode.Line, valueNode.Column, registryName)
+			}
+			registryConfig, ok := config.RegistryConfigs[registryName]
 			if !ok {
 				return fmt.Errorf("line %d column %d: annotation references unknown registry %s", valueNode.Line, valueNode.Column, registryName)
 			}
@@ -66,7 +85,7 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 			}
 
 			policyName := segments[2]
-			policy, ok := (*policies)[policyName]
+			policy, ok := config.Policies[policyName]
 			if !ok {
 				return fmt.Errorf("line %d column %d: annotation references unknown policy %s", valueNode.Line, valueNode.Column, policyName)
 			}
@@ -80,22 +99,37 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 				return err
 			}
 
-			availableVersions, err := registry.FetchVersions(resourceName)
-			if err != nil {
-				return err
+			var availableVersions []string
+			cachedResource := cache.FindResource(registryName, resourceName)
+			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration(registryConfig.Interval)).Before(time.Now()) {
+				versions, err := registry.FetchVersions(resourceName)
+				if err != nil {
+					return err
+				}
+				availableVersions = *versions
+				nextCache := cache.UpdateResource(GitOpsUpdaterCacheResource{
+					RegistryName: registryName,
+					ResourceName: resourceName,
+					Versions:     availableVersions,
+					Timestamp:    time.Now(),
+				})
+				cache = &nextCache
+			} else {
+				availableVersions = cachedResource.Versions
 			}
+
 			currentValue := valueNode.Value
 			currentVersion, err := (*format).ExtractVersion(currentValue)
 			if err != nil {
 				return err
 			}
-			nextVersion, err := policy.FindNext(*currentVersion, *availableVersions)
+			nextVersion, err := policy.FindNext(*currentVersion, availableVersions)
 			if err != nil {
 				return err
 			}
 
 			if *currentVersion != *nextVersion {
-				log.Printf("%s/%s: %s -> %s\n", registryName, resourceName, *currentVersion, *nextVersion)
+				log.Printf("Update for %s/%s from %s to %s\n", registryName, resourceName, *currentVersion, *nextVersion)
 				nextValue, err := (*format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
 					return err
@@ -119,6 +153,16 @@ func UpdateVersions(dir string, opts UpdateVersionsOptions) error {
 			if err != nil {
 				return err
 			}
+		}
+
+		cacheBytesOut, err := SaveGitOpsUpdaterCache(*cache)
+		if err != nil {
+			return err
+		}
+
+		err = ioutil.WriteFile(cacheFile, *cacheBytesOut, 0644)
+		if err != nil {
+			return err
 		}
 	}
 
