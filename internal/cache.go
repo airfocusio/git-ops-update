@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"io/ioutil"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -33,6 +34,30 @@ func SaveGitOpsUpdaterCache(cache GitOpsUpdaterCache) (*[]byte, error) {
 		return nil, err
 	}
 	return &bytes, nil
+}
+
+func LoadGitOpsUpdaterCacheFromFile(file string) (*GitOpsUpdaterCache, error) {
+	cacheRaw, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	cache, err := LoadGitOpsUpdaterCache(cacheRaw)
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
+func SaveGitOpsUpdaterCacheToFile(cache GitOpsUpdaterCache, file string) error {
+	cacheBytesOut, err := SaveGitOpsUpdaterCache(cache)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(file, *cacheBytesOut, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c1 GitOpsUpdaterCache) Equal(c2 GitOpsUpdaterCache) bool {

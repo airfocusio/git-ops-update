@@ -1,8 +1,11 @@
 package internal
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 func fileList(dir string, includes []string, excludes []string) (*[]string, error) {
@@ -53,4 +56,46 @@ func fileGlob(dir string, pattern string) (*[]string, error) {
 		return nil
 	})
 	return &files, err
+}
+
+func fileResolvePath(dir string, file string) string {
+	if !filepath.IsAbs(file) {
+		return filepath.Join(dir, file)
+	}
+	return file
+}
+
+func fileReadYaml(file string) (*yaml.Node, error) {
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	doc, err := readYaml(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func fileWriteYaml(file string, doc yaml.Node) error {
+	bytes, err := writeYaml(doc)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(file, bytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readYaml(bytes []byte) (*yaml.Node, error) {
+	doc := yaml.Node{}
+	err := yaml.Unmarshal(bytes, &doc)
+	return &doc, err
+}
+
+func writeYaml(doc yaml.Node) ([]byte, error) {
+	bytes, err := yaml.Marshal(&doc)
+	return bytes, err
 }

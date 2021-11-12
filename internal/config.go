@@ -3,6 +3,7 @@ package internal
 import (
 	utiljson "encoding/json"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 
 	"github.com/google/go-cmp/cmp"
@@ -84,6 +85,17 @@ func LoadGitOpsUpdaterConfig(yaml []byte) (*GitOpsUpdaterConfig, error) {
 	config.Registries = registries
 	config.Policies = policies
 
+	return config, nil
+}
+func LoadGitOpsUpdaterConfigFromFile(file string) (*GitOpsUpdaterConfig, error) {
+	configRaw, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	config, err := LoadGitOpsUpdaterConfig(configRaw)
+	if err != nil {
+		return nil, err
+	}
 	return config, nil
 }
 
