@@ -85,21 +85,25 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		return err
 	}
 
-	branch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
-	branchesIter, err := repo.Branches()
+	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
+	existingBranchesIter, err := repo.Branches()
 	if err != nil {
 		return err
 	}
-	branchExists := false
-	branchesIter.ForEach(func(b *plumbing.Reference) error {
-		if b.Name() == branch {
-			branchExists = true
+	targetBranchExists := false
+	existingBranchesIter.ForEach(func(b *plumbing.Reference) error {
+		if b.Name() == targetBranch {
+			targetBranchExists = true
 		}
 		return nil
 	})
 
-	if !branchExists {
-		err := worktree.Checkout(&git.CheckoutOptions{Branch: branch, Create: true})
+	if !targetBranchExists {
+		baseBranch, err := repo.Head()
+		if err != nil {
+			return err
+		}
+		err = worktree.Checkout(&git.CheckoutOptions{Branch: targetBranch, Create: true})
 		if err != nil {
 			return err
 		}
@@ -126,9 +130,8 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		tc := oauth2.NewClient(ctx, ts)
 		client := github.NewClient(tc)
 		pullTitle := "Update"
-		// TODO lookup base branch by looking at the current branch in worktree
-		pullBase := "refs/heads/main"
-		pullHead := string(branch)
+		pullBase := string(baseBranch.Name())
+		pullHead := string(targetBranch)
 		pullBody := changes.Message()
 		_, res, err := client.PullRequests.Create(context.Background(), *owner, *repo, &github.NewPullRequest{
 			Title: &pullTitle,
@@ -140,7 +143,8 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 			return err
 		}
 		defer res.Body.Close()
-		// TODO go back to base branch again
+
+		worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
 	}
 
 	return nil
