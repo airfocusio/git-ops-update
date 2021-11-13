@@ -112,11 +112,13 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	}
 
 	for _, c := range changes {
-		log.Printf("%s\n", c.Message())
 		if !opts.Dry {
-			err := c.Action(dir, Changes{c})
+			done, err := c.Action(dir, Changes{c})
 			if err != nil {
 				return err
+			}
+			if done {
+				log.Printf("%s\n", c.Message())
 			}
 			err = SaveCacheToFile(*cache, cacheFile)
 			if err != nil {

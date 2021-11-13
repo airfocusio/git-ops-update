@@ -21,8 +21,8 @@ type Git struct {
 }
 
 type GitProvider interface {
-	Apply(dir string, changes Changes) error
-	Request(dir string, changes Changes) error
+	Apply(dir string, changes Changes) (bool, error)
+	Request(dir string, changes Changes) (bool, error)
 }
 
 type GitAuthor struct {
@@ -39,36 +39,36 @@ type GitHubGitProvider struct {
 	AccessToken string
 }
 
-type Action func(dir string, changes Changes) error
+type Action func(dir string, changes Changes) (bool, error)
 
 var branchPrefix = "git-ops-update"
 
-func (p LocalGitProvider) Apply(dir string, changes Changes) error {
+func (p LocalGitProvider) Apply(dir string, changes Changes) (bool, error) {
 	err := changes.Apply(dir)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
-func (p LocalGitProvider) Request(dir string, changes Changes) error {
+func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
 	log.Printf("Local git provider does not support request mode. Will apply changes directly instead")
 	return p.Apply(dir, changes)
 }
 
-func (p GitHubGitProvider) Apply(dir string, changes Changes) error {
+func (p GitHubGitProvider) Apply(dir string, changes Changes) (bool, error) {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return fmt.Errorf("unable to open git repository: %v", err)
+		return false, fmt.Errorf("unable to open git repository: %v", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return fmt.Errorf("unable to open git worktree: %v", err)
+		return false, fmt.Errorf("unable to open git worktree: %v", err)
 	}
 
 	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
 	if err != nil {
-		return fmt.Errorf("unable to commit changes: %v", err)
+		return false, fmt.Errorf("unable to commit changes: %v", err)
 	}
 	err = repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
@@ -77,24 +77,24 @@ func (p GitHubGitProvider) Apply(dir string, changes Changes) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("unable to push changes: %v", err)
+		return false, fmt.Errorf("unable to push changes: %v", err)
 	}
-	return nil
+	return true, nil
 }
 
-func (p GitHubGitProvider) Request(dir string, changes Changes) error {
+func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return fmt.Errorf("unable to open git repository: %v", err)
+		return false, fmt.Errorf("unable to open git repository: %v", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return fmt.Errorf("unable to open git worktree: %v", err)
+		return false, fmt.Errorf("unable to open git worktree: %v", err)
 	}
 
 	remote, err := repo.Remote("origin")
 	if err != nil {
-		return fmt.Errorf("unable to get git remote origin: %v", err)
+		return false, fmt.Errorf("unable to get git remote origin: %v", err)
 	}
 	remoteRefs, err := remote.List(&git.ListOptions{
 		Auth: &http.BasicAuth{
@@ -103,7 +103,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("unable to list git branches: %v", err)
+		return false, fmt.Errorf("unable to list git branches: %v", err)
 	}
 	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
 	targetBranchExists := false
@@ -117,15 +117,15 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 	if !targetBranchExists {
 		baseBranch, err := repo.Head()
 		if err != nil {
-			return fmt.Errorf("unable to get base branch: %v", err)
+			return false, fmt.Errorf("unable to get base branch: %v", err)
 		}
 		err = worktree.Checkout(&git.CheckoutOptions{Branch: targetBranch, Create: true})
 		if err != nil {
-			return fmt.Errorf("unable to create target branch: %v", err)
+			return false, fmt.Errorf("unable to create target branch: %v", err)
 		}
 		_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
 		if err != nil {
-			return fmt.Errorf("unable to commit changes: %v", err)
+			return false, fmt.Errorf("unable to commit changes: %v", err)
 		}
 		err = repo.Push(&git.PushOptions{
 			Auth: &http.BasicAuth{
@@ -134,12 +134,12 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("unable to push changes: %v", err)
+			return false, fmt.Errorf("unable to push changes: %v", err)
 		}
 
 		owner, repo, err := extractGitHubOwnerRepoFromRemote(*remote)
 		if err != nil {
-			return fmt.Errorf("unable to extract github owner/repository from remote origin: %v", err)
+			return false, fmt.Errorf("unable to extract github owner/repository from remote origin: %v", err)
 		}
 
 		ctx := context.Background()
@@ -157,14 +157,18 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 			Body:  &pullBody,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to create github pull request: %v", err)
+			return false, fmt.Errorf("unable to create github pull request: %v", err)
 		}
 		defer res.Body.Close()
 
-		worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
+		err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
+		if err != nil {
+			return true, fmt.Errorf("unable to checkout to bae branch: %v", err)
+		}
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, message string, author GitAuthor) (*plumbing.Hash, error) {
@@ -201,12 +205,12 @@ func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, erro
 func getAction(p GitProvider, actionName string) (*Action, error) {
 	switch actionName {
 	case "apply":
-		fn := Action(func(dir string, changes Changes) error {
+		fn := Action(func(dir string, changes Changes) (bool, error) {
 			return p.Apply(dir, changes)
 		})
 		return &fn, nil
 	case "request":
-		fn := Action(func(dir string, changes Changes) error {
+		fn := Action(func(dir string, changes Changes) (bool, error) {
 			return p.Request(dir, changes)
 		})
 		return &fn, nil
