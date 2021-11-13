@@ -10,6 +10,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/google/go-github/v40/github"
 	"golang.org/x/oauth2"
@@ -69,8 +70,12 @@ func (p GitHubGitProvider) Apply(dir string, changes Changes) error {
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %v", err)
 	}
-
-	err = repo.Push(&git.PushOptions{})
+	err = repo.Push(&git.PushOptions{
+		Auth: &http.BasicAuth{
+			Username: "api",
+			Password: p.AccessToken,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("unable to push changes: %v", err)
 	}
@@ -87,18 +92,27 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		return fmt.Errorf("unable to open git worktree: %v", err)
 	}
 
-	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
-	existingBranchesIter, err := repo.Branches()
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return fmt.Errorf("unable to get git remote origin: %v", err)
+	}
+	remoteRefs, err := remote.List(&git.ListOptions{
+		Auth: &http.BasicAuth{
+			Username: "api",
+			Password: p.AccessToken,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("unable to list git branches: %v", err)
 	}
+	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
 	targetBranchExists := false
-	existingBranchesIter.ForEach(func(b *plumbing.Reference) error {
-		if b.Name() == targetBranch {
+	for _, ref := range remoteRefs {
+		if ref.Name() == targetBranch {
 			targetBranchExists = true
+			break
 		}
-		return nil
-	})
+	}
 
 	if !targetBranchExists {
 		baseBranch, err := repo.Head()
@@ -113,15 +127,16 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		if err != nil {
 			return fmt.Errorf("unable to commit changes: %v", err)
 		}
-		err = repo.Push(&git.PushOptions{})
+		err = repo.Push(&git.PushOptions{
+			Auth: &http.BasicAuth{
+				Username: "api",
+				Password: p.AccessToken,
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("unable to push changes: %v", err)
 		}
 
-		remote, err := repo.Remote("origin")
-		if err != nil {
-			return fmt.Errorf("unable to get git remote origin: %v", err)
-		}
 		owner, repo, err := extractGitHubOwnerRepoFromRemote(*remote)
 		if err != nil {
 			return fmt.Errorf("unable to extract github owner/repository from remote origin: %v", err)
@@ -168,8 +183,8 @@ func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, me
 }
 
 func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, error) {
-	httpRegex := regexp.MustCompile(`^https://github.com/(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)$`)
-	sshRegex := regexp.MustCompile(`^git@github.com:(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)$`)
+	httpRegex := regexp.MustCompile(`^https://github.com/(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)?$`)
+	sshRegex := regexp.MustCompile(`^git@github.com:(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)?$`)
 	for _, url := range remote.Config().URLs {
 		httpMatch := httpRegex.FindStringSubmatch(url)
 		if httpMatch != nil {
