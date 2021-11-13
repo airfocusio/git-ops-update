@@ -16,9 +16,6 @@ func TestCache(t *testing.T) {
       - "21.04"
       - "21.10"
     timestamp: 2006-01-02T15:04:05Z
-actions:
-  - identifier: identifier
-    timestamp: 2006-01-02T15:04:05Z
 `
 
 	c1, err := LoadCache([]byte(yaml))
@@ -33,12 +30,6 @@ actions:
 				ResourceName: "library/ubuntu",
 				Versions:     []string{"21.04", "21.10"},
 				Timestamp:    ts,
-			},
-		},
-		Actions: []CacheAction{
-			{
-				Identifier: "identifier",
-				Timestamp:  ts,
 			},
 		},
 	}

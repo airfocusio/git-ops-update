@@ -41,7 +41,8 @@ policies:
         pinPatch: yes
         allowPrereleases: yes
 git:
+  author:
+    name: name
+    email: email
   gitHub:
-    owner: owner
-    repo: repo
     accessToken: access_token

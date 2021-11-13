@@ -83,8 +83,10 @@ func TestLoadConfig(t *testing.T) {
 		},
 		Git: Git{
 			Provider: GitHubGitProvider{
-				Owner:       "owner",
-				Repo:        "repo",
+				Author: GitAuthor{
+					Name:  "name",
+					Email: "email",
+				},
 				AccessToken: "access_token",
 			},
 		},

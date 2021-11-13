@@ -68,7 +68,13 @@ type RawConfigGitGitHub struct {
 	AccessToken string `mapstructure:"accessToken"`
 }
 
+type RawConfigGitAuthor struct {
+	Name  string `mapstructure:"name"`
+	Email string `mapstructure:"email"`
+}
+
 type RawConfigGit struct {
+	Author RawConfigGitAuthor  `mapstructure:"author"`
 	GitHub *RawConfigGitGitHub `mapstructure:"gitHub"`
 }
 
@@ -118,6 +124,9 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 
 	registries := map[string]Registry{}
 	for rn, r := range config.Registries {
+		if !validateName(rn) {
+			return nil, fmt.Errorf("registry name %s is invalid", rn)
+		}
 		if r.Docker != nil {
 			registries[rn] = DockerRegistry{
 				Interval: r.Interval,
@@ -143,6 +152,9 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 
 	policies := map[string]Policy{}
 	for pn, p := range config.Policies {
+		if !validateName(pn) {
+			return nil, fmt.Errorf("policy name %s is invalid", pn)
+		}
 		extracts := []Extract{}
 		for ei, e := range p.Extracts {
 			if e.Lexicographic != nil {
@@ -181,14 +193,19 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 	}
 
 	git := Git{}
+	gitAuthor := GitAuthor{
+		Name:  config.Git.Author.Name,
+		Email: config.Git.Author.Email,
+	}
 	if config.Git.GitHub != nil {
 		git.Provider = GitHubGitProvider{
-			Owner:       config.Git.GitHub.Owner,
-			Repo:        config.Git.GitHub.Repo,
+			Author:      gitAuthor,
 			AccessToken: config.Git.GitHub.AccessToken,
 		}
 	} else {
-		git.Provider = LocalGitProvider{}
+		git.Provider = LocalGitProvider{
+			Author: gitAuthor,
+		}
 	}
 
 	return &Config{

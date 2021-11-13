@@ -67,3 +67,8 @@ func fileWriteYaml(file string, v interface{}) error {
 	}
 	return nil
 }
+
+func validateName(name string) bool {
+	nameRegex := regexp.MustCompile(`^([a-z0-9\-]+)$`)
+	return nameRegex.MatchString(name)
+}

@@ -26,7 +26,7 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 		return err
 	}
 
-	changes := []Change{}
+	changes := Changes{}
 	for _, file := range *files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
@@ -111,20 +111,12 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	}
 
 	for _, c := range changes {
-		identifier := c.File + "#" + yamlTraceToString(c.Trace) + "#" + c.NewValue
-		if cache.HasAction(identifier) {
-			log.Printf("Skipping update resource %s/%s from %s to %s at %s#%s\n", c.RegistryName, c.ResourceName, c.OldVersion, c.NewVersion, c.File, yamlTraceToString(c.Trace))
-			continue
-		}
-
-		log.Printf("Update resource %s/%s from %s to %s at %s#%s\n", c.RegistryName, c.ResourceName, c.OldVersion, c.NewVersion, c.File, yamlTraceToString(c.Trace))
+		log.Printf("%s\n", c.Message())
 		if !opts.Dry {
-			err := config.Git.Provider.Apply(dir, []Change{c})
+			err := config.Git.Provider.Apply(dir, Changes{c})
 			if err != nil {
 				return err
 			}
-			nextCache := cache.AddAction(identifier)
-			cache = &nextCache
 			err = SaveCacheToFile(*cache, cacheFile)
 			if err != nil {
 				return err
