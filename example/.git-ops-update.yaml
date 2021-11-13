@@ -2,25 +2,25 @@ files:
   includes:
     - '\.yaml$'
   excludes:
-    - '.git-ops-update(\.cache)?\.yaml$'
+    - '\.git-ops-update(\.cache)?\.yaml$'
 registries:
-  docker:
+  my-docker-registry:
     interval: 1h
     docker:
       url: https://registry-1.docker.io
-  helm-nginx:
+  my-helm-registry:
     interval: 1h
     helm:
       url: https://helm.nginx.com/stable
 policies:
-  semver:
+  my-semver-policy:
     pattern: '^(?P<all>.*)$'
     extracts:
       - value: '<all>'
         semver:
           pinMajor: yes
           pinMinor: yes
-  ubuntu:
+  my-ubuntu-policy:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:
       - value: '<year>'

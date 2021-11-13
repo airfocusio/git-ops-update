@@ -9,4 +9,4 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: nginx-ingress
-      version: 0.10.1 # {"$git-ops-update":"helm-nginx:nginx-ingress:semver"}
+      version: 0.10.1 # {"$git-ops-update":"my-helm-registry:nginx-ingress:my-semver-policy"}
