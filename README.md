@@ -136,5 +136,5 @@ cd ~/my-git-directory
 ```bash
 cd my-git-directory
 docker pull ghcr.io/choffmeister/git-ops-update:latest
-docker run --rm -v $PWD:/workdir choffmeister/git-ops-update:latest
+docker run --rm -v $PWD:/workdir ghcr.io/choffmeister/git-ops-update:latest
 ```
