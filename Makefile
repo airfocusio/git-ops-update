@@ -7,9 +7,7 @@ BIN := git-ops-update
 REGISTRY ?= ghcr.io/choffmeister
 
 IMAGE := $(REGISTRY)/$(BIN)
-
-# This version-strategy uses git tags to set the version string.
-VERSION := $(shell git describe --tags --always --dirty)
+VERSION := test
 
 MAIN := ./cmd/git-ops-update
 TEST := ./internal
