@@ -39,7 +39,7 @@ func (f TagFormat) ReplaceVersion(str string, version string) (*string, error) {
 	return &result, nil
 }
 
-func GetFormat(formatName string) (*Format, error) {
+func getFormat(formatName string) (*Format, error) {
 	switch formatName {
 	case "plain":
 		format := Format(PlainFormat{})

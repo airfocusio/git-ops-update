@@ -38,6 +38,8 @@ type GitHubGitProvider struct {
 	AccessToken string
 }
 
+type Action func(dir string, changes Changes) error
+
 var branchPrefix = "git-ops-update"
 
 func (p LocalGitProvider) Apply(dir string, changes Changes) error {
@@ -179,4 +181,21 @@ func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, erro
 		}
 	}
 	return nil, nil, fmt.Errorf("unable to extract github owner/repository from remote %s", remote.Config().Name)
+}
+
+func getAction(p GitProvider, actionName string) (*Action, error) {
+	switch actionName {
+	case "apply":
+		fn := Action(func(dir string, changes Changes) error {
+			return p.Apply(dir, changes)
+		})
+		return &fn, nil
+	case "request":
+		fn := Action(func(dir string, changes Changes) error {
+			return p.Request(dir, changes)
+		})
+		return &fn, nil
+	default:
+		return nil, fmt.Errorf("unknown action %s", actionName)
+	}
 }
