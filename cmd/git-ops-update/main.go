@@ -28,7 +28,7 @@ var (
 			if err != nil {
 				return fmt.Errorf("unable to load configuration: %v", err)
 			}
-			err = internal.UpdateVersions(*dir, *config, internal.UpdateVersionsOptions{
+			err = internal.ApplyUpdates(*dir, *config, internal.UpdateVersionsOptions{
 				DryRun: dryRun,
 			})
 			if err != nil {

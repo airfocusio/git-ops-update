@@ -1,0 +1,60 @@
+package internal
+
+import (
+	"testing"
+	"time"
+
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestDetectUpdates(t *testing.T) {
+	viperInstance := viper.New()
+	viperInstance.SetConfigName(".git-ops-update")
+	viperInstance.SetConfigType("yaml")
+	viperInstance.AddConfigPath("../example")
+	err := viperInstance.ReadInConfig()
+	if assert.NoError(t, err) {
+		cache := Cache{
+			Resources: []CacheResource{
+				{
+					RegistryName: "my-docker-registry",
+					ResourceName: "library/ubuntu",
+					Versions:     []string{"18.04", "18.10", "19.04", "19.10"},
+					Timestamp:    time.Now(),
+				},
+				{
+					RegistryName: "my-helm-registry",
+					ResourceName: "nginx-ingress",
+					Versions:     []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0", "0.11.1"},
+					Timestamp:    time.Now(),
+				},
+			},
+		}
+		err = SaveCacheToFile(cache, "../example/.git-ops-update.cache.yaml")
+		if assert.NoError(t, err) {
+
+			config, err := LoadConfig(*viperInstance)
+			if assert.NoError(t, err) {
+				changes, err := DetectUpdates("../example", *config)
+				if assert.NoError(t, err) {
+					assert.Len(t, *changes, 2)
+
+					assert.Equal(t, "deployment.yaml", (*changes)[0].File)
+					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, (*changes)[0].Trace)
+					assert.Equal(t, "18.04", (*changes)[0].OldVersion)
+					assert.Equal(t, "18.10", (*changes)[0].NewVersion)
+					assert.Equal(t, "ubuntu:18.04", (*changes)[0].OldValue)
+					assert.Equal(t, "ubuntu:18.10", (*changes)[0].NewValue)
+
+					assert.Equal(t, "helm-release.yaml", (*changes)[1].File)
+					assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, (*changes)[1].Trace)
+					assert.Equal(t, "0.10.1", (*changes)[1].OldVersion)
+					assert.Equal(t, "0.10.3", (*changes)[1].NewVersion)
+					assert.Equal(t, "0.10.1", (*changes)[1].OldValue)
+					assert.Equal(t, "0.10.3", (*changes)[1].NewValue)
+				}
+			}
+		}
+	}
+}

@@ -4,6 +4,7 @@ import (
 	utiljson "encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,7 +15,30 @@ type UpdateVersionsOptions struct {
 	DryRun bool
 }
 
-func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error {
+func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
+	changes, err := DetectUpdates(dir, config)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range *changes {
+		if !opts.DryRun {
+			done, err := c.Action(dir, Changes{c})
+			if err != nil {
+				return err
+			}
+			if done {
+				fmt.Printf("%s\n", c.Message())
+			}
+		} else {
+			fmt.Printf("%s\n", c.Message())
+		}
+	}
+
+	return nil
+}
+
+func DetectUpdates(dir string, config Config) (*Changes, error) {
 	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
 	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
@@ -24,21 +48,21 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	changes := Changes{}
 	for _, file := range *files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fmt.Printf("Scanning file %s\n", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		err = VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
@@ -116,29 +140,16 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 			return nil
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	for _, c := range changes {
-		if !opts.DryRun {
-			done, err := c.Action(dir, Changes{c})
-			if err != nil {
-				return err
-			}
-			if done {
-				fmt.Printf("%s\n", c.Message())
-			}
-			err = SaveCacheToFile(*cache, cacheFile)
-			if err != nil {
-				return err
-			}
-		} else {
-			fmt.Printf("%s\n", c.Message())
-		}
+	err = SaveCacheToFile(*cache, cacheFile)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return &changes, nil
 }
 
 type annotation struct {
@@ -154,8 +165,14 @@ type annotation struct {
 }
 
 func parseAnnotation(valueNode yaml.Node, annotationStr string, config Config) (*annotation, error) {
+	regex := regexp.MustCompile(`git-ops-update\s*(\{.*?\})`)
+	annotationStrMatch := regex.FindStringSubmatch(annotationStr)
+	if annotationStrMatch == nil {
+		return nil, nil
+	}
+
 	annotation := annotation{}
-	err := utiljson.Unmarshal([]byte(annotationStr), &annotation)
+	err := utiljson.Unmarshal([]byte(annotationStrMatch[1]), &annotation)
 	if err != nil || annotation.RegistryName == "" || annotation.ResourceName == "" || annotation.PolicyName == "" {
 		return nil, nil
 	}
