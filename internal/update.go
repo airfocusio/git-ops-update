@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -11,7 +10,7 @@ import (
 )
 
 type UpdateVersionsOptions struct {
-	Dry bool
+	DryRun bool
 }
 
 func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error {
@@ -32,7 +31,7 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 		if err != nil {
 			return err
 		}
-		log.Printf("Scanning file %s\n", fileRel)
+		fmt.Printf("Scanning file %s\n", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
@@ -112,18 +111,20 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	}
 
 	for _, c := range changes {
-		if !opts.Dry {
+		if !opts.DryRun {
 			done, err := c.Action(dir, Changes{c})
 			if err != nil {
 				return err
 			}
 			if done {
-				log.Printf("%s\n", c.Message())
+				fmt.Printf("%s\n", c.Message())
 			}
 			err = SaveCacheToFile(*cache, cacheFile)
 			if err != nil {
 				return err
 			}
+		} else {
+			fmt.Printf("%s\n", c.Message())
 		}
 	}
 

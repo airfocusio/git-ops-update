@@ -1,33 +1,63 @@
 package main
 
 import (
-	"flag"
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/choffmeister/git-ops-update/internal"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func main() {
-	dryFlag := flag.Bool("dry", false, "Dry")
-	dirFlag := flag.String("dir", ".", "Directory")
-	flag.Parse()
+var (
+	directory string
+	dryRun    bool
+	rootCmd   = &cobra.Command{
+		Use:          "git-ops-update",
+		Short:        "An updater for docker images and helm charts in your infrastructure-as-code repository",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir, viperInstance, err := initConfig()
+			if err != nil {
+				return fmt.Errorf("unable to initialize: %v", err)
+			}
+			config, err := internal.LoadConfig(*viperInstance)
+			if err != nil {
+				return fmt.Errorf("unable to load configuration: %v", err)
+			}
+			err = internal.UpdateVersions(*dir, *config, internal.UpdateVersionsOptions{
+				DryRun: dryRun,
+			})
+			if err != nil {
+				return fmt.Errorf("unable to update versions: %v", err)
+			}
+			return nil
+		},
+	}
+)
 
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&directory, "dir", ".", "dir")
+	rootCmd.Flags().BoolVar(&dryRun, "dry", false, "dry")
+}
+
+func initConfig() (*string, *viper.Viper, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("unable to determine current directory: %v\n", err)
+		return nil, nil, err
 	}
-	if !filepath.IsAbs(*dirFlag) {
-		dir = filepath.Join(dir, *dirFlag)
+	if !filepath.IsAbs(directory) {
+		dir = filepath.Join(dir, directory)
 	} else {
-		dir = *dirFlag
-	}
-
-	opts := internal.UpdateVersionsOptions{
-		Dry: *dryFlag,
+		dir = directory
 	}
 
 	viperInstance := viper.New()
@@ -36,17 +66,11 @@ func main() {
 	viperInstance.AddConfigPath(dir)
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	viperInstance.AutomaticEnv()
+
 	err = viperInstance.ReadInConfig()
 	if err != nil {
-		log.Fatalf("unable to load configuration: %v\n", err)
+		return nil, nil, err
 	}
 
-	config, err := internal.LoadConfig(*viperInstance)
-	if err != nil {
-		log.Fatalf("unable to load configuration: %v\n", err)
-	}
-	err = internal.UpdateVersions(dir, *config, opts)
-	if err != nil {
-		log.Fatalf("unable to update versions: %v\n", err)
-	}
+	return &dir, viperInstance, nil
 }

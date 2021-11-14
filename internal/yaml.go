@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"log"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -44,7 +43,7 @@ func (t yamlTrace) ToString() string {
 			if ok {
 				traceStr = traceStr + "." + strconv.Itoa(i)
 			} else {
-				log.Fatalf("unexpected incompatible yaml trace")
+				traceStr = traceStr + "." + "???"
 			}
 		}
 	}

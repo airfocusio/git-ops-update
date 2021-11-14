@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"time"
 
@@ -52,7 +51,7 @@ func (p LocalGitProvider) Apply(dir string, changes Changes) (bool, error) {
 }
 
 func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
-	log.Printf("Local git provider does not support request mode. Will apply changes directly instead")
+	fmt.Printf("Local git provider does not support request mode. Will apply changes directly instead")
 	return p.Apply(dir, changes)
 }
 
