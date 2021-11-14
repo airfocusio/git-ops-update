@@ -2,7 +2,8 @@ files:
   includes:
     - '\.yaml$'
   excludes:
-    - '\.git-ops-update(\.cache)?\.yaml$'
+    - '\.generated\.yaml$'
+    - '\/system\/.*\.yaml$'
 registries:
   my-docker-registry:
     interval: 1h

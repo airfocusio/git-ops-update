@@ -13,6 +13,7 @@ files:
     - '\.yaml$'
   excludes:
     - '\.generated\.yaml$'
+    - '\/system\/.*\.yaml$'
 ```
 
 ### Define registries

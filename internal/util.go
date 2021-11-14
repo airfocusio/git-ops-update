@@ -8,6 +8,7 @@ import (
 )
 
 func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*[]string, error) {
+	defaultExclude := regexp.MustCompile(`\/\.git-ops-update(\.cache)?\.yaml$`)
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
@@ -17,12 +18,16 @@ func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*
 		if err != nil {
 			return err
 		}
+		pathRel = "/" + pathRel
 
 		for _, i := range includes {
 			if i.Match([]byte(pathRel)) {
 				excluded := false
+				if defaultExclude.MatchString(pathRel) {
+					excluded = true
+				}
 				for _, e := range excludes {
-					if e.Match([]byte(pathRel)) {
+					if e.MatchString(pathRel) {
 						excluded = true
 					}
 				}
