@@ -12,7 +12,7 @@ files:
   includes:
     - '\.yaml$'
   excludes:
-    - '\.generared\.yaml$'
+    - '\.generated\.yaml$'
 ```
 
 ### Define registries
