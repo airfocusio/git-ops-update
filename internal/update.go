@@ -18,7 +18,8 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
 	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
-		return err
+		fmt.Printf("unable to read cache: %v\n", err)
+		cache = &Cache{}
 	}
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
