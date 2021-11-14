@@ -14,10 +14,8 @@ registries:
       url: https://helm.nginx.com/stable
 policies:
   my-semver-policy:
-    pattern: '^(?P<all>.*)$'
     extracts:
-      - value: '<all>'
-        semver:
+      - semver:
           pinMajor: yes
           pinMinor: yes
   my-ubuntu-policy:

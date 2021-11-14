@@ -10,12 +10,22 @@ import (
 
 func TestPolicyParse(t *testing.T) {
 	p1 := Policy{}
-	actual, err := p1.Parse("v1")
+	actual, err := p1.Parse("1")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{}, actual)
 	}
 
-	p2 := Policy{
+	p2 := Policy{Extracts: []Extract{{Strategy: NumericExtractStrategy{}}}}
+	actual, err = p2.Parse("1")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1"}, actual)
+	}
+	actual, err = p2.Parse("2")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"2"}, actual)
+	}
+
+	p3 := Policy{
 		Pattern: regexp.MustCompile(`^(?P<major>\d+)\.(?P<minor>\d+)$`),
 		Extracts: []Extract{
 			{
@@ -32,7 +42,7 @@ func TestPolicyParse(t *testing.T) {
 			},
 		},
 	}
-	actual, err = p2.Parse("1.2")
+	actual, err = p3.Parse("1.2")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{"1", "2", "12"}, actual)
 	}

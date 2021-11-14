@@ -55,10 +55,8 @@ Policies define how you would select and compare different potential new version
 # .git-ops-update.yaml
 policies:
   my-semver-policy:
-    pattern: '^(?P<all>.*)$'
     extracts:
-      - value: '<all>'
-        semver: {}
+      - semver: {}
   my-ubuntu-specific-policy:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:

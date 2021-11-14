@@ -57,11 +57,14 @@ func (p Policy) Parse(version string) (*[]string, error) {
 
 	result := []string{}
 	for _, e := range p.Extracts {
-		value := extractPattern.ReplaceAllStringFunc(e.Value, func(raw string) string {
-			key := raw[1 : len(raw)-1]
-			value := segments[key]
-			return value
-		})
+		value := version
+		if e.Value != "" {
+			value = extractPattern.ReplaceAllStringFunc(e.Value, func(raw string) string {
+				key := raw[1 : len(raw)-1]
+				value := segments[key]
+				return value
+			})
+		}
 		result = append(result, value)
 	}
 
