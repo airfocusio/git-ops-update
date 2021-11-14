@@ -15,6 +15,7 @@ var (
 	directory string
 	dryRun    bool
 	rootCmd   = &cobra.Command{
+		Version:      "<version>",
 		Use:          "git-ops-update",
 		Short:        "An updater for docker images and helm charts in your infrastructure-as-code repository",
 		SilenceUsage: true,
