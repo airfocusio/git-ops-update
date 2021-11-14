@@ -13,7 +13,7 @@ MAIN := ./cmd/git-ops-update
 TEST := ./internal
 
 run:
-	go run $(MAIN) --dir=example --dry
+	go run $(MAIN) --dir=example
 
 build:
 	mkdir -p build/

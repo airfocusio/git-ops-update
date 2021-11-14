@@ -62,7 +62,7 @@ func (cs Changes) Message() string {
 	return strings.Join(lines, "\n")
 }
 
-func (c Change) Apply(dir string, fileHooks ...func(file string) error) error {
+func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 	file := filepath.Join(dir, c.File)
 	doc := yaml.Node{}
 	err := fileReadYaml(file, &doc)
@@ -90,9 +90,9 @@ func (c Change) Apply(dir string, fileHooks ...func(file string) error) error {
 	return nil
 }
 
-func (cs Changes) Apply(dir string, fileHooks ...func(file string) error) error {
+func (cs Changes) Push(dir string, fileHooks ...func(file string) error) error {
 	for _, c := range cs {
-		err := c.Apply(dir, fileHooks...)
+		err := c.Push(dir, fileHooks...)
 		if err != nil {
 			return err
 		}

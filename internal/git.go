@@ -20,7 +20,7 @@ type Git struct {
 }
 
 type GitProvider interface {
-	Apply(dir string, changes Changes) (bool, error)
+	Push(dir string, changes Changes) (bool, error)
 	Request(dir string, changes Changes) (bool, error)
 }
 
@@ -42,8 +42,9 @@ type Action func(dir string, changes Changes) (bool, error)
 
 var branchPrefix = "git-ops-update"
 
-func (p LocalGitProvider) Apply(dir string, changes Changes) (bool, error) {
-	err := changes.Apply(dir)
+func (p LocalGitProvider) Push(dir string, changes Changes) (bool, error) {
+	fmt.Printf("Local git provider does not support push mode. Will push apply changes to worktree")
+	err := changes.Push(dir)
 	if err != nil {
 		return false, err
 	}
@@ -51,11 +52,11 @@ func (p LocalGitProvider) Apply(dir string, changes Changes) (bool, error) {
 }
 
 func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
-	fmt.Printf("Local git provider does not support request mode. Will apply changes directly instead")
-	return p.Apply(dir, changes)
+	fmt.Printf("Local git provider does not support request mode. Will push apply changes to worktree")
+	return p.Push(dir, changes)
 }
 
-func (p GitHubGitProvider) Apply(dir string, changes Changes) (bool, error) {
+func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return false, fmt.Errorf("unable to open git repository: %v", err)
@@ -171,7 +172,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 }
 
 func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, message string, author GitAuthor) (*plumbing.Hash, error) {
-	changes.Apply(dir, func(file string) error {
+	changes.Push(dir, func(file string) error {
 		_, err := worktree.Add(file)
 		return err
 	})
@@ -204,10 +205,15 @@ func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, erro
 func getAction(p GitProvider, actionName string) (*Action, error) {
 	switch actionName {
 	case "":
-		return getAction(p, "apply")
-	case "apply":
+		return getAction(p, "push")
+	case "disabled":
 		fn := Action(func(dir string, changes Changes) (bool, error) {
-			return p.Apply(dir, changes)
+			return false, nil
+		})
+		return &fn, nil
+	case "push":
+		fn := Action(func(dir string, changes Changes) (bool, error) {
+			return p.Push(dir, changes)
 		})
 		return &fn, nil
 	case "request":

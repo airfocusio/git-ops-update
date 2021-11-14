@@ -80,7 +80,7 @@ metadata:
 spec:
     containers:
       - name: ubuntu
-        image: ubuntu:18.04 # git-ops-update {"registry":"my-docker-registry","resource":"library/ubuntu","policy":"my-ubuntu-policy","format":"tag","action":"apply"}
+        image: ubuntu:18.04 # git-ops-update {"registry":"my-docker-registry","resource":"library/ubuntu","policy":"my-ubuntu-policy","format":"tag","action":"push"}
 ```
 
 ### Provide configuration via environment variables
