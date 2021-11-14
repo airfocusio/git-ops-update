@@ -203,6 +203,8 @@ func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, erro
 
 func getAction(p GitProvider, actionName string) (*Action, error) {
 	switch actionName {
+	case "":
+		return getAction(p, "apply")
 	case "apply":
 		fn := Action(func(dir string, changes Changes) (bool, error) {
 			return p.Apply(dir, changes)

@@ -1,9 +1,10 @@
 package internal
 
 import (
+	utiljson "encoding/json"
 	"fmt"
 	"path/filepath"
-	"regexp"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -39,23 +40,31 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 			return err
 		}
 
-		err = VisitAnnotations(fileDoc, "git-ops-update", func(trace yamlTrace, yamlNode *yaml.Node, annotation string) error {
-			registryName, registry, resourceName, _, policy, format, action, err := parseAnnotation(*yamlNode, annotation, config)
+		err = VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
+			lineComment := strings.TrimPrefix(yamlNode.LineComment, "#")
+			if lineComment == "" {
+				return nil
+			}
+
+			annotation, err := parseAnnotation(*yamlNode, lineComment, config)
 			if err != nil {
 				return err
 			}
+			if annotation == nil {
+				return nil
+			}
 
 			var availableVersions []string
-			cachedResource := cache.FindResource(*registryName, *resourceName)
-			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*registry).GetInterval())).Before(time.Now()) {
-				versions, err := (*registry).FetchVersions(*resourceName)
+			cachedResource := cache.FindResource(annotation.RegistryName, annotation.ResourceName)
+			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*annotation.Registry).GetInterval())).Before(time.Now()) {
+				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
 					return err
 				}
 				availableVersions = *versions
 				nextCache := cache.UpdateResource(CacheResource{
-					RegistryName: *registryName,
-					ResourceName: *resourceName,
+					RegistryName: annotation.RegistryName,
+					ResourceName: annotation.ResourceName,
 					Versions:     availableVersions,
 					Timestamp:    time.Now(),
 				})
@@ -69,11 +78,11 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 			}
 
 			currentValue := yamlNode.Value
-			currentVersion, err := (*format).ExtractVersion(currentValue)
+			currentVersion, err := (*annotation.Format).ExtractVersion(currentValue)
 			if err != nil {
 				return err
 			}
-			nextVersion, err := policy.FindNext(*currentVersion, availableVersions)
+			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions)
 			if err != nil {
 				return err
 			}
@@ -86,20 +95,20 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 						traceStr = traceStr + "." + s
 					}
 				}
-				nextValue, err := (*format).ReplaceVersion(currentValue, *nextVersion)
+				nextValue, err := (*annotation.Format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
 					return err
 				}
 				changes = append(changes, Change{
-					RegistryName: *registryName,
-					ResourceName: *resourceName,
+					RegistryName: annotation.RegistryName,
+					ResourceName: annotation.ResourceName,
 					OldVersion:   *currentVersion,
 					NewVersion:   *nextVersion,
 					File:         fileRel,
 					Trace:        trace,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
-					Action:       *action,
+					Action:       *annotation.Action,
 				})
 			}
 
@@ -131,38 +140,48 @@ func UpdateVersions(dir string, config Config, opts UpdateVersionsOptions) error
 	return nil
 }
 
-func parseAnnotation(valueNode yaml.Node, annotation string, config Config) (*string, *Registry, *string, *string, *Policy, *Format, *Action, error) {
-	regex := regexp.MustCompile("^(?P<registryName>[^:]+):(?P<resourceName>.+):(?P<policyName>[^:]+):(?P<formatName>[^:]+):(?P<actionName>[^:]+)$")
-	match := regex.FindStringSubmatch(annotation)
-	if match == nil {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation %s is malformed", valueNode.Line, valueNode.Column, annotation)
+type annotation struct {
+	RegistryName string `json:"registry"`
+	Registry     *Registry
+	ResourceName string `json:"resource"`
+	PolicyName   string `json:"policy"`
+	Policy       *Policy
+	FormatName   string `json:"format"`
+	Format       *Format
+	ActionName   string `json:"action"`
+	Action       *Action
+}
+
+func parseAnnotation(valueNode yaml.Node, annotationStr string, config Config) (*annotation, error) {
+	annotation := annotation{}
+	err := utiljson.Unmarshal([]byte(annotationStr), &annotation)
+	if err != nil || annotation.RegistryName == "" || annotation.ResourceName == "" || annotation.PolicyName == "" {
+		return nil, nil
 	}
 
-	registryName := match[1]
-	registry, ok := config.Registries[registryName]
+	registry, ok := config.Registries[annotation.RegistryName]
 	if !ok {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation %s references unknown registry %s", valueNode.Line, valueNode.Column, annotation, registryName)
+		return nil, fmt.Errorf("line %d column %d: annotation %s references unknown registry %s", valueNode.Line, valueNode.Column, annotationStr, annotation.RegistryName)
 	}
+	annotation.Registry = &registry
 
-	resourceName := match[2]
-
-	policyName := match[3]
-	policy, ok := config.Policies[policyName]
+	policy, ok := config.Policies[annotation.PolicyName]
 	if !ok {
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("line %d column %d: annotation %s references unknown policy %s", valueNode.Line, valueNode.Column, annotation, policyName)
+		return nil, fmt.Errorf("line %d column %d: annotation %s references unknown policy %s", valueNode.Line, valueNode.Column, annotationStr, annotation.PolicyName)
 	}
+	annotation.Policy = &policy
 
-	formatName := match[4]
-	format, err := getFormat(formatName)
+	format, err := getFormat(annotation.FormatName)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, err
 	}
+	annotation.Format = format
 
-	actionName := match[5]
-	action, err := getAction(config.Git.Provider, actionName)
+	action, err := getAction(config.Git.Provider, annotation.ActionName)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, err
 	}
+	annotation.Action = action
 
-	return &registryName, &registry, &resourceName, &policyName, &policy, format, action, nil
+	return &annotation, nil
 }

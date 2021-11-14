@@ -79,7 +79,7 @@ metadata:
 spec:
     containers:
       - name: ubuntu
-        image: ubuntu:18.04 # {"$git-ops-update":"my-docker-registry:library/ubuntu:my-ubuntu-policy:tag:apply"}
+        image: ubuntu:18.04 # {"registry":"my-docker-registry","resource":"library/ubuntu","policy":"my-ubuntu-policy","format":"tag","action":"apply"}
 ```
 
 ### Provide configuration via environment variables
