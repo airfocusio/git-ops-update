@@ -25,8 +25,8 @@ func TestPlainFormat(t *testing.T) {
 	}
 }
 
-func TestTagFormat(t *testing.T) {
-	format := TagFormat{}
+func TestDockerImageFormat(t *testing.T) {
+	format := DockerImageFormat{}
 
 	_, err := format.ExtractVersion("")
 	assert.Error(t, err)
