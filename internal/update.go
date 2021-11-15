@@ -166,28 +166,39 @@ type annotation struct {
 	Suffix       string `json:"suffix"`
 }
 
-func parseAnnotation(valueNode yaml.Node, annotationStr string, config Config) (*annotation, error) {
+func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Config) (*annotation, error) {
 	regex := regexp.MustCompile(`git-ops-update\s*(\{.*?\})`)
-	annotationStrMatch := regex.FindStringSubmatch(annotationStr)
+	annotationStrMatch := regex.FindStringSubmatch(annotationStrFull)
 	if annotationStrMatch == nil {
 		return nil, nil
 	}
+	annotationStr := annotationStrMatch[1]
 
 	annotation := annotation{}
-	err := utiljson.Unmarshal([]byte(annotationStrMatch[1]), &annotation)
-	if err != nil || annotation.RegistryName == "" || annotation.ResourceName == "" || annotation.PolicyName == "" {
-		return nil, nil
+	err := utiljson.Unmarshal([]byte(annotationStr), &annotation)
+	if err != nil {
+		return nil, fmt.Errorf("annotation %s malformed: %v", annotationStr, err)
 	}
 
+	if annotation.RegistryName == "" {
+		return nil, fmt.Errorf("annotation %s misses registry", annotationStr)
+	}
 	registry, ok := config.Registries[annotation.RegistryName]
 	if !ok {
-		return nil, fmt.Errorf("line %d column %d: annotation %s references unknown registry %s", valueNode.Line, valueNode.Column, annotationStr, annotation.RegistryName)
+		return nil, fmt.Errorf("annotation %s references unknown registry %s", annotationStr, annotation.RegistryName)
 	}
 	annotation.Registry = &registry
 
+	if annotation.ResourceName == "" {
+		return nil, fmt.Errorf("annotation %s misses resource", annotationStr)
+	}
+
+	if annotation.PolicyName == "" {
+		return nil, fmt.Errorf("annotation %s misses policy", annotationStr)
+	}
 	policy, ok := config.Policies[annotation.PolicyName]
 	if !ok {
-		return nil, fmt.Errorf("line %d column %d: annotation %s references unknown policy %s", valueNode.Line, valueNode.Column, annotationStr, annotation.PolicyName)
+		return nil, fmt.Errorf("annotation %s references unknown policy %s", annotationStr, annotation.PolicyName)
 	}
 	annotation.Policy = &policy
 
