@@ -66,6 +66,7 @@ func initConfig() (*string, *viper.Viper, error) {
 	viperInstance.SetConfigType("yaml")
 	viperInstance.AddConfigPath(dir)
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
+	viperInstance.SetEnvPrefix("GIT_OPS_UPDATE")
 	viperInstance.AutomaticEnv()
 
 	err = viperInstance.ReadInConfig()
