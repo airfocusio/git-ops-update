@@ -107,7 +107,7 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 			if err != nil {
 				return err
 			}
-			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions)
+			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix)
 			if err != nil {
 				return err
 			}
@@ -162,6 +162,8 @@ type annotation struct {
 	Format       *Format
 	ActionName   string `json:"action"`
 	Action       *Action
+	Prefix       string `json:"prefix"`
+	Suffix       string `json:"suffix"`
 }
 
 func parseAnnotation(valueNode yaml.Node, annotationStr string, config Config) (*annotation, error) {

@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ubuntu
+  name: nginx
   labels:
-    app: ubuntu
+    app: nginx
 spec:
   selector:
     matchLabels:
-      app: ubuntu
+      app: nginx
   template:
     metadata:
       labels:
-        app: ubuntu
+        app: nginx
     spec:
       containers:
-        - name: ubuntu
-          image: ubuntu:18.04 # git-ops-update {"registry":"my-docker-registry","resource":"library/ubuntu","policy":"my-ubuntu-policy","format":"docker-image","action":"push"}
+        - name: nginx
+          image: nginx:1.19.0-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}

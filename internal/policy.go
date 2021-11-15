@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/blang/semver/v4"
 )
@@ -42,12 +43,21 @@ type SemverExtractStrategy struct {
 
 var extractPattern = regexp.MustCompile(`<([a-zA-Z0-9\-]+)>`)
 
-func (p Policy) Parse(version string) (*[]string, error) {
+func (p Policy) Parse(version string, prefix string, suffix string) (*[]string, error) {
+	unpackedVersion := version
+	if !strings.HasPrefix(unpackedVersion, prefix) {
+		return nil, nil
+	}
+	unpackedVersion = strings.TrimPrefix(unpackedVersion, prefix)
+	if !strings.HasSuffix(version, suffix) {
+		return nil, nil
+	}
+	unpackedVersion = strings.TrimSuffix(unpackedVersion, suffix)
 	segments := map[string]string{}
 	if p.Pattern != nil {
-		match := p.Pattern.FindStringSubmatch(version)
+		match := p.Pattern.FindStringSubmatch(unpackedVersion)
 		if match == nil {
-			return &[]string{}, fmt.Errorf("version %s does not match pattern %v", version, p.Pattern)
+			return &[]string{}, fmt.Errorf("version %s does not match pattern %v with prefix \"%s\" and suffix \"%s\"", version, p.Pattern, prefix, suffix)
 		}
 		names := p.Pattern.SubexpNames()
 		for i, s := range match {
@@ -57,7 +67,7 @@ func (p Policy) Parse(version string) (*[]string, error) {
 
 	result := []string{}
 	for _, e := range p.Extracts {
-		value := version
+		value := unpackedVersion
 		if e.Value != "" {
 			value = extractPattern.ReplaceAllStringFunc(e.Value, func(raw string) string {
 				key := raw[1 : len(raw)-1]
@@ -101,16 +111,19 @@ func (l versionParsedList) Less(i, j int) bool {
 	return false
 }
 
-func (p Policy) FilterAndSort(currentVersion string, availableVersions []string) (*[]string, error) {
-	currentVersionParsed, err := p.Parse(currentVersion)
+func (p Policy) FilterAndSort(currentVersion string, availableVersions []string, prefix string, suffix string) (*[]string, error) {
+	currentVersionParsed, err := p.Parse(currentVersion, prefix, suffix)
 	if err != nil {
 		return nil, err
+	}
+	if currentVersionParsed == nil {
+		return nil, fmt.Errorf("version %s does not match pattern %v with prefix \"%s\" and suffix \"%s\"", currentVersion, p.Pattern, prefix, suffix)
 	}
 
 	temp1 := []versionParsed{}
 	for _, version := range availableVersions {
-		parsed, err := p.Parse(version)
-		if err == nil {
+		parsed, err := p.Parse(version, prefix, suffix)
+		if parsed != nil && err == nil {
 			temp1 = append(temp1, versionParsed{
 				Version: version,
 				Parsed:  *parsed,
@@ -139,9 +152,9 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string)
 	return &result, nil
 }
 
-func (p Policy) FindNext(currentVersion string, availableVersions []string) (*string, error) {
+func (p Policy) FindNext(currentVersion string, availableVersions []string, prefix string, suffix string) (*string, error) {
 	allVersions := append(availableVersions, currentVersion)
-	allFilteredSortedVersions, err := p.FilterAndSort(currentVersion, allVersions)
+	allFilteredSortedVersions, err := p.FilterAndSort(currentVersion, allVersions, prefix, suffix)
 	if err != nil {
 		return nil, err
 	}

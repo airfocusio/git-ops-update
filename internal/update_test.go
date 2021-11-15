@@ -19,8 +19,8 @@ func TestDetectUpdates(t *testing.T) {
 			Resources: []CacheResource{
 				{
 					RegistryName: "my-docker-registry",
-					ResourceName: "library/ubuntu",
-					Versions:     []string{"18.04", "18.10", "19.04", "19.10"},
+					ResourceName: "library/nginx",
+					Versions:     []string{"1.19.0-alpine", "1.19.1-alpine", "1.20.0-alpine", "1.20.1-alpine", "1.21.0-alpine", "1.21.1-alpine"},
 					Timestamp:    time.Now(),
 				},
 				{
@@ -42,10 +42,10 @@ func TestDetectUpdates(t *testing.T) {
 
 					assert.Equal(t, "deployment.yaml", (*changes)[0].File)
 					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, (*changes)[0].Trace)
-					assert.Equal(t, "18.04", (*changes)[0].OldVersion)
-					assert.Equal(t, "18.10", (*changes)[0].NewVersion)
-					assert.Equal(t, "ubuntu:18.04", (*changes)[0].OldValue)
-					assert.Equal(t, "ubuntu:18.10", (*changes)[0].NewValue)
+					assert.Equal(t, "1.19.0-alpine", (*changes)[0].OldVersion)
+					assert.Equal(t, "1.19.1-alpine", (*changes)[0].NewVersion)
+					assert.Equal(t, "nginx:1.19.0-alpine", (*changes)[0].OldValue)
+					assert.Equal(t, "nginx:1.19.1-alpine", (*changes)[0].NewValue)
 
 					assert.Equal(t, "helm-release.yaml", (*changes)[1].File)
 					assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, (*changes)[1].Trace)

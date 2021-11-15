@@ -19,11 +19,3 @@ policies:
       - semver:
           pinMajor: yes
           pinMinor: yes
-  my-ubuntu-policy:
-    pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
-    extracts:
-      - value: '<year>'
-        numeric:
-          pin: yes
-      - value: '<month>'
-        numeric: {}

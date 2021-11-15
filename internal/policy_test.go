@@ -10,17 +10,17 @@ import (
 
 func TestPolicyParse(t *testing.T) {
 	p1 := Policy{}
-	actual, err := p1.Parse("1")
+	actual, err := p1.Parse("1", "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{}, actual)
 	}
 
 	p2 := Policy{Extracts: []Extract{{Strategy: NumericExtractStrategy{}}}}
-	actual, err = p2.Parse("1")
+	actual, err = p2.Parse("1", "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{"1"}, actual)
 	}
-	actual, err = p2.Parse("2")
+	actual, err = p2.Parse("2", "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{"2"}, actual)
 	}
@@ -42,15 +42,27 @@ func TestPolicyParse(t *testing.T) {
 			},
 		},
 	}
-	actual, err = p3.Parse("1.2")
+	actual, err = p3.Parse("1.2", "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{"1", "2", "12"}, actual)
+	}
+	actual, err = p3.Parse("v1.2-alpine", "v", "-alpine")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1", "2", "12"}, actual)
+	}
+	actual, err = p3.Parse("v1.2", "v", "-alpine")
+	if assert.NoError(t, err) {
+		assert.Nil(t, actual)
+	}
+	actual, err = p3.Parse("1.2-alpine", "v", "-alpine")
+	if assert.NoError(t, err) {
+		assert.Nil(t, actual)
 	}
 }
 
 func TestPolicyFilterAndSort(t *testing.T) {
 	p1 := Policy{}
-	actual, err := p1.FilterAndSort("1", []string{"1", "2", "3"})
+	actual, err := p1.FilterAndSort("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, []string{"1", "2", "3"}, *actual)
 	}
@@ -68,15 +80,23 @@ func TestPolicyFilterAndSort(t *testing.T) {
 			},
 		},
 	}
-	actual, err = p2.FilterAndSort("1.0", strings.Split("18.04 18.10 19.04 19.10 20.04 20.10 21.04 21.10 22.04", " "))
+	actual, err = p2.FilterAndSort("1.0", strings.Split("18.04 18.10 19.04 19.10 20.04 20.10 21.04 21.10 22.04", " "), "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("22.04 21.10 21.04 20.10 20.04 19.10 19.04 18.10 18.04", " "), *actual)
 	}
+	actual, err = p2.FilterAndSort("v1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("v22.04-ubuntu v21.10-ubuntu v21.04-ubuntu v20.10-ubuntu v20.04-ubuntu v19.10-ubuntu v19.04-ubuntu v18.10-ubuntu v18.04-ubuntu", " "), *actual)
+	}
+	_, err = p2.FilterAndSort("v1.0", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
+	assert.Error(t, err)
+	_, err = p2.FilterAndSort("1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
+	assert.Error(t, err)
 }
 
 func TestPolicyFindNext(t *testing.T) {
 	p1 := Policy{}
-	actual, err := p1.FindNext("1", []string{"1", "2", "3"})
+	actual, err := p1.FindNext("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "1", *actual)
 	}
@@ -94,19 +114,19 @@ func TestPolicyFindNext(t *testing.T) {
 			},
 		},
 	}
-	actual, err = p2.FindNext("1.0", []string{"1.0", "1.1", "2.0", "2.0-pre"})
+	actual, err = p2.FindNext("1.0", []string{"1.0", "1.1", "2.0", "2.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0", *actual)
 	}
-	actual, err = p2.FindNext("1.1", []string{"1.0", "1.1", "2.0", "2.0-pre"})
+	actual, err = p2.FindNext("1.1", []string{"1.0", "1.1", "2.0", "2.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0", *actual)
 	}
-	actual, err = p2.FindNext("2.0", []string{"1.0", "1.1", "2.0", "2.0-pre"})
+	actual, err = p2.FindNext("2.0", []string{"1.0", "1.1", "2.0", "2.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0", *actual)
 	}
-	actual, err = p2.FindNext("3.0", []string{"1.0", "1.1", "2.0", "2.0-pre"})
+	actual, err = p2.FindNext("3.0", []string{"1.0", "1.1", "2.0", "2.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "3.0", *actual)
 	}
@@ -120,19 +140,19 @@ func TestPolicyFindNext(t *testing.T) {
 			},
 		},
 	}
-	actual, err = p3.FindNext("1.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"})
+	actual, err = p3.FindNext("1.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0.0", *actual)
 	}
-	actual, err = p3.FindNext("1.1.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"})
+	actual, err = p3.FindNext("1.1.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0.0", *actual)
 	}
-	actual, err = p3.FindNext("2.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"})
+	actual, err = p3.FindNext("2.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "2.0.0", *actual)
 	}
-	actual, err = p3.FindNext("3.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"})
+	actual, err = p3.FindNext("3.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "3.0.0", *actual)
 	}
