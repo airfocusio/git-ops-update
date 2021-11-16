@@ -34,10 +34,10 @@ func newRootCmd(version FullVersion) *rootCmd {
 			if err != nil {
 				return fmt.Errorf("unable to load configuration: %v", err)
 			}
-			err = internal.ApplyUpdates(*dir, *config, internal.UpdateVersionsOptions{
+			errs := internal.ApplyUpdates(*dir, *config, internal.UpdateVersionsOptions{
 				DryRun: result.dryRun,
 			})
-			if err != nil {
+			if len(errs) > 0 {
 				return fmt.Errorf("unable to update versions: %v", err)
 			}
 			return nil

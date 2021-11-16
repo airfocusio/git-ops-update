@@ -15,17 +15,15 @@ type UpdateVersionsOptions struct {
 	DryRun bool
 }
 
-func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
-	changes, err := DetectUpdates(dir, config)
-	if err != nil {
-		return err
-	}
+func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) []error {
+	changes, errs := DetectUpdates(dir, config)
 
-	for _, c := range *changes {
+	for _, c := range changes {
 		if !opts.DryRun {
 			done, err := c.Action(dir, Changes{c})
 			if err != nil {
-				return err
+				errs = append(errs, err)
+				continue
 			}
 			if done {
 				fmt.Printf("%s\n", c.Message())
@@ -35,37 +33,40 @@ func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
 		}
 	}
 
-	return nil
+	return errs
 }
 
-func DetectUpdates(dir string, config Config) (*Changes, error) {
+func DetectUpdates(dir string, config Config) (Changes, []error) {
 	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
 	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
-		fmt.Printf("unable to read cache: %v\n", err)
+		fmt.Printf("Unable to read cache: %v\n", err)
 		cache = &Cache{}
 	}
 
 	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
 
 	changes := Changes{}
+	errors := []error{}
 	for _, file := range *files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
-			return nil, err
+			errors = append(errors, err)
+			continue
 		}
 		fmt.Printf("Scanning file %s\n", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
 		if err != nil {
-			return nil, err
+			errors = append(errors, err)
+			continue
 		}
 
-		err = VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
+		errs := VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
 			lineComment := strings.TrimPrefix(yamlNode.LineComment, "#")
 			if lineComment == "" {
 				return nil
@@ -139,17 +140,18 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 
 			return nil
 		})
-		if err != nil {
-			return nil, err
+		if len(errs) > 0 {
+			errors = append(errors, errs...)
+			continue
 		}
 	}
 
 	err = SaveCacheToFile(*cache, cacheFile)
 	if err != nil {
-		return nil, err
+		errors = append(errors, err)
 	}
 
-	return &changes, nil
+	return changes, errors
 }
 
 type annotation struct {

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -36,23 +37,25 @@ func TestDetectUpdates(t *testing.T) {
 
 			config, err := LoadConfig(*viperInstance)
 			if assert.NoError(t, err) {
-				changes, err := DetectUpdates("../example", *config)
-				if assert.NoError(t, err) {
-					assert.Len(t, *changes, 2)
+				changes, errs := DetectUpdates("../example", *config)
+				if assert.Len(t, changes, 2) {
+					assert.Equal(t, "deployment.yaml", changes[0].File)
+					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, changes[0].Trace)
+					assert.Equal(t, "1.19.0-alpine", changes[0].OldVersion)
+					assert.Equal(t, "1.19.1-alpine", changes[0].NewVersion)
+					assert.Equal(t, "nginx:1.19.0-alpine", changes[0].OldValue)
+					assert.Equal(t, "nginx:1.19.1-alpine", changes[0].NewValue)
 
-					assert.Equal(t, "deployment.yaml", (*changes)[0].File)
-					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, (*changes)[0].Trace)
-					assert.Equal(t, "1.19.0-alpine", (*changes)[0].OldVersion)
-					assert.Equal(t, "1.19.1-alpine", (*changes)[0].NewVersion)
-					assert.Equal(t, "nginx:1.19.0-alpine", (*changes)[0].OldValue)
-					assert.Equal(t, "nginx:1.19.1-alpine", (*changes)[0].NewValue)
-
-					assert.Equal(t, "helm-release.yaml", (*changes)[1].File)
-					assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, (*changes)[1].Trace)
-					assert.Equal(t, "0.10.1", (*changes)[1].OldVersion)
-					assert.Equal(t, "0.10.3", (*changes)[1].NewVersion)
-					assert.Equal(t, "0.10.1", (*changes)[1].OldValue)
-					assert.Equal(t, "0.10.3", (*changes)[1].NewValue)
+					assert.Equal(t, "helm-release.yaml", changes[1].File)
+					assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, changes[1].Trace)
+					assert.Equal(t, "0.10.1", changes[1].OldVersion)
+					assert.Equal(t, "0.10.3", changes[1].NewVersion)
+					assert.Equal(t, "0.10.1", changes[1].OldValue)
+					assert.Equal(t, "0.10.3", changes[1].NewValue)
+				}
+				if assert.Len(t, errs, 2) {
+					assert.Equal(t, fmt.Errorf(`annotation {"will":"fail1"} misses registry`), errs[0])
+					assert.Equal(t, fmt.Errorf(`annotation {"will":"fail2"} misses registry`), errs[1])
 				}
 			}
 		}
