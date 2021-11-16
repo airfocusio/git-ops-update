@@ -9,7 +9,7 @@ REGISTRY ?= ghcr.io/choffmeister
 IMAGE := $(REGISTRY)/$(BIN)
 VERSION := test
 
-MAIN := ./cmd/git-ops-update
+MAIN := .
 TEST := ./internal
 
 run:

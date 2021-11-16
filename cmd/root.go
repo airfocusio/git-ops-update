@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -39,12 +39,6 @@ var (
 	}
 )
 
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
-}
-
 func init() {
 	rootCmd.PersistentFlags().StringVar(&directory, "dir", ".", "dir")
 	rootCmd.Flags().BoolVar(&dryRun, "dry", false, "dry")
@@ -75,4 +69,8 @@ func initConfig() (*string, *viper.Viper, error) {
 	}
 
 	return &dir, viperInstance, nil
+}
+
+func Execute() error {
+	return rootCmd.Execute()
 }
