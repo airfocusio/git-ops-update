@@ -6,8 +6,16 @@ import (
 	"github.com/choffmeister/git-ops-update/cmd"
 )
 
+// nolint: gochecknoglobals
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+	builtBy = ""
+)
+
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.Execute(cmd.FullVersion{Version: version, Commit: commit, Date: date, BuiltBy: builtBy}); err != nil {
 		os.Exit(1)
 	}
 }
