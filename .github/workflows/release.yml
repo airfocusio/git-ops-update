@@ -16,7 +16,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Inject version
-      run: sed -i "s/<version>/$(echo ${{ github.ref }} | sed s#refs/tags/v##)/" cmd/git-ops-update/main.go
+      run: sed -i "s/<version>/$(echo ${{ github.ref }} | sed s#refs/tags/v##)/" cmd/root.go
     - name: Run build
       run: make build
     - uses: docker/login-action@v1
