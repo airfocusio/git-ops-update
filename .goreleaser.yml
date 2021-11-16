@@ -2,10 +2,7 @@
 # Make sure to check the documentation at https://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
 builds:
   - env:
       - CGO_ENABLED=0
@@ -24,15 +21,13 @@ archives:
       386: i386
       amd64: x86_64
 dockers:
-  -
-    skip_push: false
-    image_templates:
-      - "ghcr.io/choffmeister/git-ops-update:{{ .Tag }}"
-      - "ghcr.io/choffmeister/git-ops-update:latest"
+  - image_templates:
+      - "ghcr.io/choffmeister/{{ .ProjectName }}:{{ .Tag }}"
+      - "ghcr.io/choffmeister/{{ .ProjectName }}:latest"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  name_template: "0.0.0-dev"
 changelog:
   sort: asc
   filters:
