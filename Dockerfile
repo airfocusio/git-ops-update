@@ -2,7 +2,7 @@ FROM golang:1.17-alpine AS builder
 
 WORKDIR /build
 COPY ./ /build/
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o git-ops-update ./cmd/git-ops-update
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o git-ops-update .
 
 FROM alpine:latest as certs
 RUN apk add --update --no-cache ca-certificates
