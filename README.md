@@ -124,14 +124,6 @@ jobs:
 
 ## Installation
 
-### Binary
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/choffmeister/git-ops-update/main/install.sh)"
-cd ~/my-git-directory
-~/bin/git-ops-update
-```
-
 ### Docker
 
 ```bash
