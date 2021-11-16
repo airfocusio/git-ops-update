@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -57,4 +58,17 @@ func TestDetectUpdates(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestErrorAggregation(t *testing.T) {
+	viperInstance := viper.New()
+	viperInstance.SetConfigName(".git-ops-update")
+	viperInstance.SetConfigType("yaml")
+	viperInstance.AddConfigPath("../tests/testErrorHandling")
+	err := viperInstance.ReadInConfig()
+	assert.NoError(t, err)
+	config, err := LoadConfig(*viperInstance)
+	assert.NoError(t, err)
+	_, err = DetectUpdates("../tests/testErrorHandling", *config)
+	assert.Equal(t, 2, len(err.(*multierror.Error).Errors))
 }

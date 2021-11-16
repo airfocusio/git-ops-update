@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,16 +17,18 @@ type UpdateVersionsOptions struct {
 }
 
 func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
+	var result error
+
 	changes, err := DetectUpdates(dir, config)
 	if err != nil {
-		return err
+		result = multierror.Append(err)
 	}
 
 	for _, c := range *changes {
 		if !opts.DryRun {
 			done, err := c.Action(dir, Changes{c})
 			if err != nil {
-				return err
+				result = multierror.Append(err, result)
 			}
 			if done {
 				fmt.Printf("%s\n", c.Message())
@@ -35,10 +38,12 @@ func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
 		}
 	}
 
-	return nil
+	return result
 }
 
 func DetectUpdates(dir string, config Config) (*Changes, error) {
+	var result error
+
 	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
 	cache, err := LoadCacheFromFile(cacheFile)
 	if err != nil {
@@ -55,14 +60,14 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 	for _, file := range *files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
-			return nil, err
+			result = multierror.Append(fmt.Errorf("failed to get relative path to file %s: %w", file, err), result)
 		}
 		fmt.Printf("Scanning file %s\n", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
 		if err != nil {
-			return nil, err
+			result = multierror.Append(fmt.Errorf("failed to read file %s: %w", file, err), result)
 		}
 
 		err = VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
@@ -73,7 +78,7 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 
 			annotation, err := parseAnnotation(*yamlNode, lineComment, config)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse annotation in file %s: %w", file, err)
 			}
 			if annotation == nil {
 				return nil
@@ -109,7 +114,7 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 			}
 			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to find next version in file %s: %w", file, err)
 			}
 
 			if *currentVersion != *nextVersion {
@@ -140,16 +145,16 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			result = multierror.Append(err, result)
 		}
 	}
 
 	err = SaveCacheToFile(*cache, cacheFile)
 	if err != nil {
-		return nil, err
+		result = multierror.Append(err, result)
 	}
 
-	return &changes, nil
+	return &changes, result
 }
 
 type annotation struct {
