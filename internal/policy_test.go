@@ -92,6 +92,20 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	assert.Error(t, err)
 	_, err = p2.FilterAndSort("1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
 	assert.Error(t, err)
+
+	p3 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<number>\d+)(?P<rest>.*)?$`),
+		Extracts: []Extract{
+			{
+				Value:    "<number>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p3.FilterAndSort("1", strings.Split("1-ab 1 2-ab 2-b 2-a 2-ab 2 1-a 1-b 1-ab", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2-b 2-ab 2-ab 2-a 2 1-b 1-ab 1-ab 1-a 1", " "), *actual)
+	}
 }
 
 func TestPolicyFindNext(t *testing.T) {

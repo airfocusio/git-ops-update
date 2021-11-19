@@ -107,6 +107,13 @@ func (l versionParsedList) Less(i, j int) bool {
 		if cmp < 0 {
 			return false
 		}
+		cmp2 := strings.Compare(a.Version, b.Version)
+		if cmp2 > 0 {
+			return true
+		}
+		if cmp2 < 0 {
+			return false
+		}
 	}
 	return false
 }
