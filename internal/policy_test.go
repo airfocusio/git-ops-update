@@ -64,7 +64,7 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FilterAndSort("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, []string{"1", "2", "3"}, *actual)
+		assert.Equal(t, []string{"3", "2", "1"}, *actual)
 	}
 
 	p2 := Policy{
@@ -92,6 +92,10 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	assert.Error(t, err)
 	_, err = p2.FilterAndSort("1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
 	assert.Error(t, err)
+	actual, err = p2.FilterAndSort("1.0", strings.Split("1.2 1.10 2.1 2.10", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+	}
 
 	p3 := Policy{
 		Pattern: regexp.MustCompile(`^(?P<number>\d+)(?P<rest>.*)?$`),
@@ -112,7 +116,7 @@ func TestPolicyFindNext(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FindNext("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, "1", *actual)
+		assert.Equal(t, "3", *actual)
 	}
 
 	p2 := Policy{
