@@ -68,7 +68,7 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	}
 
 	p2 := Policy{
-		Pattern: regexp.MustCompile(`^(?P<major>\d+)\.(?P<minor>\d+)$`),
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)\.(?P<minor>\d+)(-.*)?$`),
 		Extracts: []Extract{
 			{
 				Value:    "<major>",
@@ -96,19 +96,13 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
 	}
-
-	p3 := Policy{
-		Pattern: regexp.MustCompile(`^(?P<number>\d+)(?P<rest>.*)?$`),
-		Extracts: []Extract{
-			{
-				Value:    "<number>",
-				Strategy: NumericExtractStrategy{},
-			},
-		},
-	}
-	actual, err = p3.FilterAndSort("1", strings.Split("1-ab 1 2-ab 2-b 2-a 2-ab 2 1-a 1-b 1-ab", " "), "", "")
+	actual, err = p2.FilterAndSort("1.0", strings.Split("1.10 1.2 2.10 2.1", " "), "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2-b 2-ab 2-ab 2-a 2 1-b 1-ab 1-ab 1-a 1", " "), *actual)
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+	}
+	actual, err = p2.FilterAndSort("1.0", strings.Split("2.10-a 1.10 1.2 2.10 2.1 1.10-b 1.10-c 1.10-a", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.10-a 2.10 2.1 1.10-c 1.10-b 1.10-a 1.10 1.2", " "), *actual)
 	}
 }
 
