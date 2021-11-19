@@ -15,8 +15,8 @@ type UpdateVersionsOptions struct {
 	DryRun bool
 }
 
-func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
-	changes, err := DetectUpdates(dir, config)
+func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts UpdateVersionsOptions) error {
+	changes, err := DetectUpdates(dir, config, cacheProvider)
 	if err != nil {
 		return err
 	}
@@ -38,15 +38,14 @@ func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) error {
 	return nil
 }
 
-func DetectUpdates(dir string, config Config) (*Changes, error) {
-	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
-	cache, err := LoadCacheFromFile(cacheFile)
+func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) (*Changes, error) {
+	cache, err := cacheProvider.Load()
 	if err != nil {
 		fmt.Printf("unable to read cache: %v\n", err)
 		cache = &Cache{}
 	}
 
-	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
+	files, err := FileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 					Timestamp:    time.Now(),
 				})
 				cache = &nextCache
-				err = SaveCacheToFile(*cache, cacheFile)
+				err = cacheProvider.Save(*cache)
 				if err != nil {
 					return err
 				}
@@ -142,11 +141,6 @@ func DetectUpdates(dir string, config Config) (*Changes, error) {
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	err = SaveCacheToFile(*cache, cacheFile)
-	if err != nil {
-		return nil, err
 	}
 
 	return &changes, nil

@@ -1,13 +1,22 @@
 package internal
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCache(t *testing.T) {
+func TestFileCacheProvider(t *testing.T) {
+	file, err := ioutil.TempFile(os.TempDir(), "cache")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer os.Remove(file.Name())
+
 	ts, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 	yaml := `resources:
   - registry: docker
@@ -17,8 +26,14 @@ func TestCache(t *testing.T) {
       - "21.10"
     timestamp: 2006-01-02T15:04:05Z
 `
+	err = ioutil.WriteFile(file.Name(), []byte(yaml), 0644)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	c1, err := LoadCache([]byte(yaml))
+	cp := FileCacheProvider{File: file.Name()}
+	c1, err := cp.Load()
 	if err != nil {
 		t.Error(err)
 		return
@@ -37,10 +52,17 @@ func TestCache(t *testing.T) {
 		t.Errorf("expected %v, got %v", c2, c1)
 		return
 	}
-	yaml2, err := SaveCache(c2)
-	if assert.NoError(t, err) {
-		assert.Equal(t, yaml, string(*yaml2))
+	err = cp.Save(c2)
+	if err != nil {
+		t.Error(err)
+		return
 	}
+	yaml2, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	assert.Equal(t, yaml, string(yaml2))
 
 	assert.Nil(t, c2.FindResource("unknown", "thing"))
 	assert.Equal(t, &CacheResource{
@@ -69,4 +91,17 @@ func TestCache(t *testing.T) {
 		Versions:     []string{"21.04", "21.10", "22.04"},
 		Timestamp:    ts,
 	}, c4.FindResource("docker", "library/ubuntu"))
+}
+
+type MemoryCacheProvider struct {
+	File  string
+	Cache *Cache
+}
+
+func (p MemoryCacheProvider) Load() (*Cache, error) {
+	return p.Cache, nil
+}
+
+func (p MemoryCacheProvider) Save(cache Cache) error {
+	return nil
 }

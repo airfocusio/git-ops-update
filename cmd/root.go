@@ -34,7 +34,9 @@ func newRootCmd(version FullVersion) *rootCmd {
 			if err != nil {
 				return fmt.Errorf("unable to load configuration: %v", err)
 			}
-			err = internal.ApplyUpdates(*dir, *config, internal.UpdateVersionsOptions{
+			cacheFile := internal.FileResolvePath(*dir, ".git-ops-update.cache.yaml")
+			cacheProvider := internal.FileCacheProvider{File: cacheFile}
+			err = internal.ApplyUpdates(*dir, *config, cacheProvider, internal.UpdateVersionsOptions{
 				DryRun: result.dryRun,
 			})
 			if err != nil {

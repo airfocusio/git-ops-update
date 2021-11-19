@@ -31,12 +31,11 @@ func TestDetectUpdates(t *testing.T) {
 				},
 			},
 		}
-		err = SaveCacheToFile(cache, "../example/.git-ops-update.cache.yaml")
+		cacheProvider := MemoryCacheProvider{Cache: &cache}
 		if assert.NoError(t, err) {
-
 			config, err := LoadConfig(*viperInstance)
 			if assert.NoError(t, err) {
-				changes, err := DetectUpdates("../example", *config)
+				changes, err := DetectUpdates("../example", *config, &cacheProvider)
 				if assert.NoError(t, err) {
 					assert.Len(t, *changes, 2)
 

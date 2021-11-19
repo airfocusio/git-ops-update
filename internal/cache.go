@@ -18,45 +18,9 @@ type Cache struct {
 	Resources []CacheResource `yaml:"resources"`
 }
 
-func LoadCache(bytes []byte) (*Cache, error) {
-	cache := &Cache{}
-	err := readYaml(bytes, cache)
-	if err != nil {
-		return nil, err
-	}
-	return cache, nil
-}
-
-func SaveCache(cache Cache) (*[]byte, error) {
-	bytes, err := writeYaml(cache)
-	if err != nil {
-		return nil, err
-	}
-	return &bytes, nil
-}
-
-func LoadCacheFromFile(file string) (*Cache, error) {
-	cacheRaw, err := ioutil.ReadFile(file)
-	if err != nil {
-		return &Cache{}, nil
-	}
-	cache, err := LoadCache(cacheRaw)
-	if err != nil {
-		return nil, err
-	}
-	return cache, nil
-}
-
-func SaveCacheToFile(cache Cache, file string) error {
-	cacheBytesOut, err := SaveCache(cache)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(file, *cacheBytesOut, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+type CacheProvider interface {
+	Load() (*Cache, error)
+	Save(cache Cache) error
 }
 
 func (c1 Cache) Equal(c2 Cache) bool {
@@ -85,4 +49,49 @@ func (c Cache) FindResource(registryName string, resourceName string) *CacheReso
 		}
 	}
 	return nil
+}
+
+type FileCacheProvider struct {
+	File string
+}
+
+func (p FileCacheProvider) Load() (*Cache, error) {
+	cacheRaw, err := ioutil.ReadFile(p.File)
+	if err != nil {
+		return &Cache{}, nil
+	}
+	cache, err := loadCache(cacheRaw)
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
+func (p FileCacheProvider) Save(cache Cache) error {
+	cacheBytesOut, err := saveCache(cache)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(p.File, *cacheBytesOut, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func loadCache(bytes []byte) (*Cache, error) {
+	cache := &Cache{}
+	err := readYaml(bytes, cache)
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
+}
+
+func saveCache(cache Cache) (*[]byte, error) {
+	bytes, err := writeYaml(cache)
+	if err != nil {
+		return nil, err
+	}
+	return &bytes, nil
 }
