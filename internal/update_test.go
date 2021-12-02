@@ -29,6 +29,12 @@ func TestDetectUpdates(t *testing.T) {
 					Versions:     []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0", "0.11.1"},
 					Timestamp:    time.Now(),
 				},
+				{
+					RegistryName: "my-git-hub-tag-registry",
+					ResourceName: "kubernetes/ingress-nginx",
+					Versions:     []string{"controller-v1.0.0", "controller-v1.0.10", "controller-v1.1.0"},
+					Timestamp:    time.Now(),
+				},
 			},
 		}
 		cacheProvider := MemoryCacheProvider{Cache: &cache}
@@ -37,7 +43,7 @@ func TestDetectUpdates(t *testing.T) {
 			if assert.NoError(t, err) {
 				changes, err := DetectUpdates("../example", *config, &cacheProvider)
 				if assert.NoError(t, err) {
-					assert.Len(t, *changes, 2)
+					assert.Len(t, *changes, 3)
 
 					assert.Equal(t, "deployment.yaml", (*changes)[0].File)
 					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, (*changes)[0].Trace)
@@ -52,6 +58,13 @@ func TestDetectUpdates(t *testing.T) {
 					assert.Equal(t, "0.10.3", (*changes)[1].NewVersion)
 					assert.Equal(t, "0.10.1", (*changes)[1].OldValue)
 					assert.Equal(t, "0.10.3", (*changes)[1].NewValue)
+
+					assert.Equal(t, "kustomization.yaml", (*changes)[2].File)
+					assert.Equal(t, yamlTrace{"bases", 0}, (*changes)[2].Trace)
+					assert.Equal(t, "controller-v1.0.0", (*changes)[2].OldVersion)
+					assert.Equal(t, "controller-v1.0.10", (*changes)[2].NewVersion)
+					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.0", (*changes)[2].OldValue)
+					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.10", (*changes)[2].NewValue)
 				}
 			}
 		}

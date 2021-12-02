@@ -29,10 +29,15 @@ type RawConfigRegistryHelm struct {
 	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
 }
 
+type RawConfigRegistryGitHubTag struct {
+	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
+}
+
 type RawConfigRegistry struct {
-	Interval time.Duration            `mapstructure:"interval"`
-	Docker   *RawConfigRegistryDocker `mapstructure:"docker"`
-	Helm     *RawConfigRegistryHelm   `mapstructure:"helm"`
+	Interval  time.Duration               `mapstructure:"interval"`
+	Docker    *RawConfigRegistryDocker    `mapstructure:"docker"`
+	Helm      *RawConfigRegistryHelm      `mapstructure:"helm"`
+	GitHubTag *RawConfigRegistryGitHubTag `mapstructure:"gitHubTag"`
 }
 
 type RawConfigPolicyExtractLexicographicStrategy struct {
@@ -143,6 +148,14 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 				Credentials: HttpBasicCredentials{
 					Username: r.Helm.Credentials.Username,
 					Password: r.Helm.Credentials.Password,
+				},
+			}
+		} else if r.GitHubTag != nil {
+			registries[rn] = GitHubTagRegistry{
+				Interval: r.Interval,
+				Credentials: HttpBasicCredentials{
+					Username: r.GitHubTag.Credentials.Username,
+					Password: r.GitHubTag.Credentials.Password,
 				},
 			}
 		} else {

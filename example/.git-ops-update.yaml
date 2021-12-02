@@ -13,9 +13,17 @@ registries:
     interval: 1h
     helm:
       url: https://helm.nginx.com/stable
+  my-git-hub-tag-registry:
+    interval: 1h
+    gitHubTag:
+      credentials:
+        username: ""
+        password: ""
 policies:
   my-semver-policy:
+    pattern: '^v?(?P<version>.*)$'
     extracts:
-      - semver:
+      - value: '<version>'
+        semver:
           pinMajor: yes
           pinMinor: yes

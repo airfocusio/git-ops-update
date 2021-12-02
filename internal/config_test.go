@@ -42,6 +42,13 @@ func TestLoadConfig(t *testing.T) {
 					Password: "pass",
 				},
 			},
+			"git-hub": GitHubTagRegistry{
+				Interval: time.Duration(3600000000000),
+				Credentials: HttpBasicCredentials{
+					Username: "user",
+					Password: "pass",
+				},
+			},
 		},
 		Policies: map[string]Policy{
 			"lexicographic": {

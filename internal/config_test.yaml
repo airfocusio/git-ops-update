@@ -18,6 +18,10 @@ registries:
     helm:
       url: https://charts.helm.sh/stable
       credentials: *creds
+  git-hub:
+    interval: 1h
+    gitHubTag:
+      credentials: *creds
 policies:
   lexicographic:
     pattern: '^(?P<all>.*)$'
