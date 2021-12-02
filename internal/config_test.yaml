@@ -9,42 +9,42 @@ files:
   - '\.generated\.yaml$'
 registries:
   docker:
+    type: docker
     interval: 1m
-    docker:
-      url: https://registry-1.docker.io
-      credentials: *creds
+    url: https://registry-1.docker.io
+    credentials: *creds
   helm:
+    type: helm
     interval: 1h
-    helm:
-      url: https://charts.helm.sh/stable
-      credentials: *creds
+    url: https://charts.helm.sh/stable
+    credentials: *creds
   git-hub:
+    type: git-hub-tag
     interval: 1h
-    gitHubTag:
-      url: https://api.github-enterprise.com
-      credentials: *creds
+    url: https://api.github-enterprise.com
+    credentials: *creds
 policies:
   lexicographic:
     pattern: '^(?P<all>.*)$'
     extracts:
-    - value: '<all>'
-      lexicographic:
-        pin: yes
+    - type: lexicographic
+      value: '<all>'
+      pin: yes
   numeric:
     pattern: '^(?P<all>.*)$'
     extracts:
-    - value: '<all>'
-      numeric:
-        pin: yes
+    - type: numeric
+      value: '<all>'
+      pin: yes
   semver:
     pattern: '^(?P<all>.*)$'
     extracts:
-    - value: '<all>'
-      semver:
-        pinMajor: yes
-        pinMinor: yes
-        pinPatch: yes
-        allowPrereleases: yes
+    - type: semver
+      value: '<all>'
+      pinMajor: yes
+      pinMinor: yes
+      pinPatch: yes
+      allowPrereleases: yes
 git:
   author:
     name: name

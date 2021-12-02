@@ -57,14 +57,14 @@ Policies define how you would select and compare different potential new version
 policies:
   my-semver-policy:
     extracts:
-      - semver: {}
+      - type: semver
   my-ubuntu-specific-policy:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:
-      - value: '<year>'
-        numeric: {}
-      - value: '<month>'
-        numeric: {}
+      - type: numeric
+        value: '<year>'
+      - type: numeric
+        value: '<month>'
 ```
 
 ### Annotate your files
