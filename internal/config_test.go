@@ -44,6 +44,7 @@ func TestLoadConfig(t *testing.T) {
 			},
 			"git-hub": GitHubTagRegistry{
 				Interval: time.Duration(3600000000000),
+				Url:      "https://api.github-enterprise.com",
 				Credentials: HttpBasicCredentials{
 					Username: "user",
 					Password: "pass",

@@ -30,6 +30,7 @@ type RawConfigRegistryHelm struct {
 }
 
 type RawConfigRegistryGitHubTag struct {
+	Url         string                   `mapstructure:"url"`
 	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
 }
 
@@ -153,6 +154,7 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 		} else if r.GitHubTag != nil {
 			registries[rn] = GitHubTagRegistry{
 				Interval: r.Interval,
+				Url:      r.GitHubTag.Url,
 				Credentials: HttpBasicCredentials{
 					Username: r.GitHubTag.Credentials.Username,
 					Password: r.GitHubTag.Credentials.Password,

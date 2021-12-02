@@ -21,6 +21,7 @@ registries:
   git-hub:
     interval: 1h
     gitHubTag:
+      url: https://api.github-enterprise.com
       credentials: *creds
 policies:
   lexicographic:

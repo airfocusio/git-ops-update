@@ -35,6 +35,7 @@ type HelmRegistry struct {
 
 type GitHubTagRegistry struct {
 	Interval    time.Duration
+	Url         string
 	Credentials HttpBasicCredentials
 }
 
@@ -126,7 +127,12 @@ func (r GitHubTagRegistry) GetInterval() time.Duration {
 }
 
 func (r GitHubTagRegistry) FetchVersions(repository string) (*[]string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/git/matching-refs/tags", repository)
+	baseUrl := "https://api.github.com"
+	if r.Url != "" {
+		baseUrl = strings.TrimSuffix(r.Url, "/")
+	}
+	url := fmt.Sprintf("%s/repos/%s/git/matching-refs/tags", baseUrl, repository)
+
 	username := r.Credentials.Username
 	password := r.Credentials.Password
 	req, err := http.NewRequest("GET", url, nil)
