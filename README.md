@@ -90,17 +90,17 @@ Every value in your configuration can be overwritten by an environment variable,
 ```yaml
 # .git-ops-update.yaml
 registries:
-  my-docker-:
+  my-docker-policy:
+    type: docker
     interval: 1h
-    docker:
-      url: https://registry-1.docker.io
-      credentials:
-        username: my-user
-        password: ""
+    url: https://registry-1.docker.io
+    credentials:
+      username: my-user
+      password: ""
 ```
 
 ```bash
-export GIT_OPS_UPDATE_REGISTRIES_DOCKER_MY_DOCKER_POLICY_CREDENTIALS_PASSWORD=my-pass
+export GIT_OPS_UPDATE_REGISTRIES_MY_DOCKER_POLICY_CREDENTIALS_PASSWORD=my-pass
 git-ops-update
 ```
 
