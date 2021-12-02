@@ -189,6 +189,17 @@ func TestLexicographicSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, false, LexicographicExtractStrategy{Pin: true}.IsCompatible("1", "2"))
 }
 
+func TestNumericSortStrategyIsValid(t *testing.T) {
+	str := NumericExtractStrategy{}
+
+	assert.Equal(t, true, str.IsValid("0"))
+	assert.Equal(t, true, str.IsValid("1"))
+	assert.Equal(t, true, str.IsValid("2"))
+	assert.Equal(t, false, str.IsValid("-1"))
+	assert.Equal(t, false, str.IsValid("a"))
+	assert.Equal(t, false, str.IsValid(""))
+}
+
 func TestNumericSortStrategyCompare(t *testing.T) {
 	str := NumericExtractStrategy{}
 
@@ -209,6 +220,17 @@ func TestNumericSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, true, NumericExtractStrategy{}.IsCompatible("1", "2"))
 	assert.Equal(t, true, NumericExtractStrategy{Pin: true}.IsCompatible("1", "1"))
 	assert.Equal(t, false, NumericExtractStrategy{Pin: true}.IsCompatible("1", "2"))
+}
+
+func TestSemverSortStrategyIsValid(t *testing.T) {
+	str := SemverExtractStrategy{}
+
+	assert.Equal(t, true, str.IsValid("0.0.0"))
+	assert.Equal(t, true, str.IsValid("1.2.3"))
+	assert.Equal(t, true, str.IsValid("1.2.3-rc.1"))
+	assert.Equal(t, false, str.IsValid("v1.2.3"))
+	assert.Equal(t, false, str.IsValid("1.2"))
+	assert.Equal(t, false, str.IsValid(""))
 }
 
 func TestSemverSortStrategyCompare(t *testing.T) {
