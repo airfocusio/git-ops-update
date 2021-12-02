@@ -53,19 +53,21 @@ func (f RegexpFormat) ExtractVersion(str string) (*string, error) {
 }
 
 func (f RegexpFormat) ReplaceVersion(str string, version string) (*string, error) {
-	match := f.Pattern.FindAllStringSubmatchIndex(str, 1)
+	match := f.Pattern.FindAllStringSubmatchIndex(str, -1)
 	if match == nil {
 		return nil, fmt.Errorf("value %s is not a in a valid according to regex pattern %s", str, &f.Pattern)
 	}
 	result := str
 	names := f.Pattern.SubexpNames()
 	delta := 0
-	for i := 1; i < len(match[0])/2; i++ {
-		i1 := match[0][i*2]
-		i2 := match[0][i*2+1]
-		if names[i] == "version" && i1 >= 0 && i2 >= 0 {
-			result = result[:(i1+delta)] + version + result[(i2+delta):]
-			delta = delta + len(version) - i2 + i1
+	for i := 0; i < len(match); i++ {
+		for j := 1; j < len(match[i])/2; j++ {
+			i1 := match[i][j*2]
+			i2 := match[i][j*2+1]
+			if names[j] == "version" && i1 >= 0 && i2 >= 0 {
+				result = result[:(i1+delta)] + version + result[(i2+delta):]
+				delta = delta + len(version) - i2 + i1
+			}
 		}
 	}
 	return &result, nil

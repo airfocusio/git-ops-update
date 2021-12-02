@@ -98,6 +98,6 @@ func TestRegexpFormatTest(t *testing.T) {
 	}
 	actual, err = format4.ReplaceVersion("foo-1.2.3-bar-1.2.4", "1.2.10")
 	if assert.NoError(t, err) {
-		assert.Equal(t, "foo-1.2.10-bar-1.2.4", *actual)
+		assert.Equal(t, "foo-1.2.10-bar-1.2.10", *actual)
 	}
 }
