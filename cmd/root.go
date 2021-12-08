@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/choffmeister/git-ops-update/internal"
+	"github.com/airfocusio/git-ops-update/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -1,4 +1,4 @@
-module github.com/choffmeister/git-ops-update
+module github.com/airfocusio/git-ops-update
 
 go 1.17
 

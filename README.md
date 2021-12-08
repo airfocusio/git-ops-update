@@ -119,7 +119,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: docker://ghcr.io/choffmeister/git-ops-update
+    - uses: docker://ghcr.io/airfocusio/git-ops-update
 ```
 
 ## Installation
@@ -128,6 +128,6 @@ jobs:
 
 ```bash
 cd my-git-directory
-docker pull ghcr.io/choffmeister/git-ops-update:latest
-docker run --rm -v $PWD:/workdir ghcr.io/choffmeister/git-ops-update:latest
+docker pull ghcr.io/airfocusio/git-ops-update:latest
+docker run --rm -v $PWD:/workdir ghcr.io/airfocusio/git-ops-update:latest
 ```

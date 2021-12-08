@@ -15,7 +15,7 @@ jobs:
     - uses: docker/login-action@v1
       with:
         registry: ghcr.io
-        username: choffmeister
+        username: airfocusio
         password: ${{ secrets.GITHUB_TOKEN }}
     - uses: actions/checkout@v2
       with:
