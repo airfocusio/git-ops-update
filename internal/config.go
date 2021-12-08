@@ -5,82 +5,82 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
+	"github.com/airfocusio/go-expandenv"
+	"gopkg.in/yaml.v3"
 )
 
 type RawConfigHttpCredentials struct {
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type RawConfigFiles struct {
-	Includes []string `mapstructure:"includes"`
-	Excludes []string `mapstructure:"excludes"`
+	Includes []string `yaml:"includes"`
+	Excludes []string `yaml:"excludes"`
 }
 
 type RawConfigRegistryDocker struct {
-	Interval    time.Duration            `mapstructure:"interval"`
-	Url         string                   `mapstructure:"url"`
-	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
+	Interval    time.Duration            `yaml:"interval"`
+	Url         string                   `yaml:"url"`
+	Credentials RawConfigHttpCredentials `yaml:"credentials"`
 }
 
 type RawConfigRegistryHelm struct {
-	Interval    time.Duration            `mapstructure:"interval"`
-	Url         string                   `mapstructure:"url"`
-	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
+	Interval    time.Duration            `yaml:"interval"`
+	Url         string                   `yaml:"url"`
+	Credentials RawConfigHttpCredentials `yaml:"credentials"`
 }
 
 type RawConfigRegistryGitHubTag struct {
-	Interval    time.Duration            `mapstructure:"interval"`
-	Url         string                   `mapstructure:"url"`
-	Credentials RawConfigHttpCredentials `mapstructure:"credentials"`
+	Interval    time.Duration            `yaml:"interval"`
+	Url         string                   `yaml:"url"`
+	Credentials RawConfigHttpCredentials `yaml:"credentials"`
 }
 
 type RawConfigPolicyExtractLexicographicStrategy struct {
-	Value string `mapstructure:"value"`
-	Pin   bool   `mapstructure:"pin"`
+	Value string `yaml:"value"`
+	Pin   bool   `yaml:"pin"`
 }
 
 type RawConfigPolicyExtractNumericStrategy struct {
-	Value string `mapstructure:"value"`
-	Pin   bool   `mapstructure:"pin"`
+	Value string `yaml:"value"`
+	Pin   bool   `yaml:"pin"`
 }
 
 type RawConfigPolicyExtractSemverStrategy struct {
-	Value            string `mapstructure:"value"`
-	PinMajor         bool   `mapstructure:"pinMajor"`
-	PinMinor         bool   `mapstructure:"pinMinor"`
-	PinPatch         bool   `mapstructure:"pinPatch"`
-	AllowPrereleases bool   `mapstructure:"allowPrereleases"`
+	Value            string `yaml:"value"`
+	PinMajor         bool   `yaml:"pinMajor"`
+	PinMinor         bool   `yaml:"pinMinor"`
+	PinPatch         bool   `yaml:"pinPatch"`
+	AllowPrereleases bool   `yaml:"allowPrereleases"`
 }
 
 type RawConfigPolicy struct {
-	Pattern  string                   `mapstructure:"pattern"`
-	Extracts []map[string]interface{} `mapstructure:"extracts"`
+	Pattern  string                   `yaml:"pattern"`
+	Extracts []map[string]interface{} `yaml:"extracts"`
 }
 
 type RawConfigGitGitHub struct {
-	Owner       string `mapstructure:"owner"`
-	Repo        string `mapstructure:"repo"`
-	AccessToken string `mapstructure:"accessToken"`
+	Owner       string `yaml:"owner"`
+	Repo        string `yaml:"repo"`
+	AccessToken string `yaml:"accessToken"`
 }
 
 type RawConfigGitAuthor struct {
-	Name  string `mapstructure:"name"`
-	Email string `mapstructure:"email"`
+	Name  string `yaml:"name"`
+	Email string `yaml:"email"`
 }
 
 type RawConfigGit struct {
-	Author RawConfigGitAuthor  `mapstructure:"author"`
-	GitHub *RawConfigGitGitHub `mapstructure:"gitHub"`
+	Author RawConfigGitAuthor  `yaml:"author"`
+	GitHub *RawConfigGitGitHub `yaml:"gitHub"`
 }
 
 type RawConfig struct {
-	Files      RawConfigFiles                    `mapstructure:"files"`
-	Registries map[string]map[string]interface{} `mapstructure:"registries"`
-	Policies   map[string]RawConfigPolicy        `mapstructure:"policies"`
-	Git        RawConfigGit                      `mapstructure:"git"`
+	Files      RawConfigFiles                    `yaml:"files"`
+	Registries map[string]map[string]interface{} `yaml:"registries"`
+	Policies   map[string]RawConfigPolicy        `yaml:"policies"`
+	Git        RawConfigGit                      `yaml:"git"`
 }
 
 type ConfigFiles struct {
@@ -95,9 +95,23 @@ type Config struct {
 	Git        Git
 }
 
-func LoadConfig(viperInst viper.Viper) (*Config, error) {
+func LoadConfig(bytesRaw []byte) (*Config, error) {
+	var expansionTemp interface{}
+	err := yaml.Unmarshal(bytesRaw, &expansionTemp)
+	if err != nil {
+		return nil, err
+	}
+	expansionTemp, err = expandenv.ExpandEnv(expansionTemp)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := yaml.Marshal(expansionTemp)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &RawConfig{}
-	err := viperInst.Unmarshal(&config, viper.DecodeHook(mapstructure.StringToTimeDurationHookFunc()))
+	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
 		return nil, err
 	}
@@ -266,13 +280,13 @@ func LoadConfig(viperInst viper.Viper) (*Config, error) {
 }
 
 func decode(input interface{}, output interface{}) error {
-	decoderConfig := mapstructure.DecoderConfig{
-		DecodeHook: mapstructure.StringToTimeDurationHookFunc(),
-		Result:     output,
-	}
-	decoder, err := mapstructure.NewDecoder(&decoderConfig)
+	bytes, err := yaml.Marshal(input)
 	if err != nil {
-		return nil
+		return err
 	}
-	return decoder.Decode(input)
+	err = yaml.Unmarshal(bytes, output)
+	if err != nil {
+		return err
+	}
+	return nil
 }

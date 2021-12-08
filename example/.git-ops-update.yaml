@@ -22,5 +22,5 @@ policies:
     extracts:
       - type: semver
         value: '<version>'
-        pinMajor: yes
-        pinMinor: yes
+        pinMajor: true
+        pinMinor: true

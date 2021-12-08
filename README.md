@@ -95,12 +95,13 @@ registries:
     interval: 1h
     url: https://registry-1.docker.io
     credentials:
-      username: my-user
-      password: ""
+      username: ${DOCKER_USERNAME}
+      password: ${DOCKER_PASSWORD}
 ```
 
 ```bash
-export GIT_OPS_UPDATE_REGISTRIES_MY_DOCKER_POLICY_CREDENTIALS_PASSWORD=my-pass
+export DOCKER_USERNAME=my-user
+export DOCKER_PASSWORD=my-pass
 git-ops-update
 ```
 

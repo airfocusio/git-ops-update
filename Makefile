@@ -4,7 +4,7 @@ MAIN := .
 TEST := ./internal
 
 run:
-	go run $(MAIN) --dir=example
+	go run $(MAIN) --dir=example --dry
 
 test:
 	go test -v $(TEST)

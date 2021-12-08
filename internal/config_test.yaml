@@ -29,22 +29,22 @@ policies:
     extracts:
     - type: lexicographic
       value: '<all>'
-      pin: yes
+      pin: true
   numeric:
     pattern: '^(?P<all>.*)$'
     extracts:
     - type: numeric
       value: '<all>'
-      pin: yes
+      pin: true
   semver:
     pattern: '^(?P<all>.*)$'
     extracts:
     - type: semver
       value: '<all>'
-      pinMajor: yes
-      pinMinor: yes
-      pinPatch: yes
-      allowPrereleases: yes
+      pinMajor: true
+      pinMinor: true
+      pinPatch: true
+      allowPrereleases: true
 git:
   author:
     name: name

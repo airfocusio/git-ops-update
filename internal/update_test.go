@@ -1,19 +1,15 @@
 package internal
 
 import (
+	"io/ioutil"
 	"testing"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDetectUpdates(t *testing.T) {
-	viperInstance := viper.New()
-	viperInstance.SetConfigName(".git-ops-update")
-	viperInstance.SetConfigType("yaml")
-	viperInstance.AddConfigPath("../example")
-	err := viperInstance.ReadInConfig()
+	bytes, err := ioutil.ReadFile("../example/.git-ops-update.yaml")
 	if assert.NoError(t, err) {
 		cache := Cache{
 			Resources: []CacheResource{
@@ -39,7 +35,7 @@ func TestDetectUpdates(t *testing.T) {
 		}
 		cacheProvider := MemoryCacheProvider{Cache: &cache}
 		if assert.NoError(t, err) {
-			config, err := LoadConfig(*viperInstance)
+			config, err := LoadConfig(bytes)
 			if assert.NoError(t, err) {
 				changes, err := DetectUpdates("../example", *config, &cacheProvider)
 				if assert.NoError(t, err) {
