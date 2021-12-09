@@ -42,7 +42,7 @@ type SemverExtractStrategy struct {
 	AllowPrereleases bool
 }
 
-var extractPattern = regexp.MustCompile(`<([a-zA-Z0-9\-_]+)>`)
+var extractPattern = regexp.MustCompile(`<([^>]+)>`)
 
 func (p Policy) Parse(version string, prefix string, suffix string) (*[]string, error) {
 	unpackedVersion := version
