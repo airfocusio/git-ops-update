@@ -201,6 +201,10 @@ func (str LexicographicExtractStrategy) IsCompatible(v1 string, v2 string) bool 
 
 func (str NumericExtractStrategy) IsValid(v string) bool {
 	vi, ve := strconv.Atoi(v)
+	if v == "" {
+		vi = 0
+		ve = nil
+	}
 	return ve == nil && vi >= 0
 }
 
@@ -210,6 +214,14 @@ func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 	}
 	v1i, v1e := strconv.Atoi(v1)
 	v2i, v2e := strconv.Atoi(v2)
+	if v1 == "" {
+		v1i = 0
+		v1e = nil
+	}
+	if v2 == "" {
+		v2i = 0
+		v2e = nil
+	}
 	if v1e != nil {
 		return -1
 	}

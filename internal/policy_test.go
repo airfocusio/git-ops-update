@@ -72,6 +72,28 @@ func TestPolicyParse(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, &[]string{"123"}, actual)
 	}
+
+	p5 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)(\.(?P<minor>\d+))?$`),
+		Extracts: []Extract{
+			{
+				Value:    "<major>",
+				Strategy: NumericExtractStrategy{},
+			},
+			{
+				Value:    "<minor>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p5.Parse("1", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1", ""}, actual)
+	}
+	actual, err = p5.Parse("1.2", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1", "2"}, actual)
+	}
 }
 
 func TestPolicyFilterAndSort(t *testing.T) {
@@ -117,6 +139,24 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	actual, err = p2.FilterAndSort("1.0", strings.Split("2.10-a 1.10 1.2 2.10 2.1 1.10-b 1.10-c 1.10-a", " "), "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("2.10-a 2.10 2.1 1.10-c 1.10-b 1.10-a 1.10 1.2", " "), *actual)
+	}
+
+	p3 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)(\.(?P<minor>\d+))?$`),
+		Extracts: []Extract{
+			{
+				Value:    "<major>",
+				Strategy: NumericExtractStrategy{},
+			},
+			{
+				Value:    "<minor>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p3.FilterAndSort("1.2", strings.Split("1.0 2 1 1.1 1.2 1.3 2.0", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.0 2 1.3 1.2 1.1 1.0 1", " "), *actual)
 	}
 }
 
@@ -211,7 +251,7 @@ func TestNumericSortStrategyIsValid(t *testing.T) {
 	assert.Equal(t, true, str.IsValid("2"))
 	assert.Equal(t, false, str.IsValid("-1"))
 	assert.Equal(t, false, str.IsValid("a"))
-	assert.Equal(t, false, str.IsValid(""))
+	assert.Equal(t, true, str.IsValid(""))
 }
 
 func TestNumericSortStrategyCompare(t *testing.T) {
