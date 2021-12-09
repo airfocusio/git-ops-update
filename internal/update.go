@@ -12,17 +12,18 @@ import (
 )
 
 type UpdateVersionsOptions struct {
-	DryRun bool
+	Dry     bool
+	Verbose bool
 }
 
 func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts UpdateVersionsOptions) error {
-	changes, err := DetectUpdates(dir, config, cacheProvider)
+	changes, err := DetectUpdates(dir, config, cacheProvider, opts.Verbose)
 	if err != nil {
 		return err
 	}
 
 	for _, c := range *changes {
-		if !opts.DryRun {
+		if !opts.Dry {
 			done, err := c.Action(dir, Changes{c})
 			if err != nil {
 				return err
@@ -35,13 +36,17 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts U
 		}
 	}
 
+	if len(*changes) == 0 {
+		fmt.Printf("No updates available\n")
+	}
+
 	return nil
 }
 
-func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) (*Changes, error) {
+func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbose bool) (*Changes, error) {
 	cache, err := cacheProvider.Load()
 	if err != nil {
-		fmt.Printf("unable to read cache: %v\n", err)
+		fmt.Printf("Unable to read cache: %v\n", err)
 		cache = &Cache{}
 	}
 
@@ -56,7 +61,9 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) (*Cha
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("Scanning file %s\n", fileRel)
+		if verbose {
+			fmt.Printf("Scanning file %s\n", fileRel)
+		}
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)

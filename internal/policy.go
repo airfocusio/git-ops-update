@@ -149,7 +149,7 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 		isCompatible := true
 		for i, parsed := range version.Parsed {
 			if !temp2.Extracts[i].Strategy.IsValid((*currentVersionParsed)[i]) {
-				return nil, fmt.Errorf("version %s has extraction %s which is invalid for selected strategy", currentVersion, (*currentVersionParsed)[i])
+				return nil, fmt.Errorf("%s has extraction %s which is invalid for selected strategy", currentVersion, (*currentVersionParsed)[i])
 			}
 			if !temp2.Extracts[i].Strategy.IsValid(parsed) {
 				isCompatible = false

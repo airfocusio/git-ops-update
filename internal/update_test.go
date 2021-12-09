@@ -37,7 +37,7 @@ func TestDetectUpdates(t *testing.T) {
 		if assert.NoError(t, err) {
 			config, err := LoadConfig(bytes)
 			if assert.NoError(t, err) {
-				changes, err := DetectUpdates("../example", *config, &cacheProvider)
+				changes, err := DetectUpdates("../example", *config, &cacheProvider, false)
 				if assert.NoError(t, err) {
 					assert.Len(t, *changes, 3)
 

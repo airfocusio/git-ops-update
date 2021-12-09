@@ -12,7 +12,8 @@ import (
 type rootCmd struct {
 	cmd       *cobra.Command
 	directory string
-	dryRun    bool
+	dry       bool
+	verbose   bool
 }
 
 func newRootCmd(version FullVersion) *rootCmd {
@@ -35,7 +36,8 @@ func newRootCmd(version FullVersion) *rootCmd {
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
 			err = internal.ApplyUpdates(dir, *config, cacheProvider, internal.UpdateVersionsOptions{
-				DryRun: result.dryRun,
+				Dry:     result.dry,
+				Verbose: result.verbose,
 			})
 			if err != nil {
 				return fmt.Errorf("unable to update versions: %v", err)
@@ -45,7 +47,8 @@ func newRootCmd(version FullVersion) *rootCmd {
 	}
 
 	cmd.PersistentFlags().StringVar(&result.directory, "dir", ".", "dir")
-	cmd.Flags().BoolVar(&result.dryRun, "dry", false, "dry")
+	cmd.Flags().BoolVar(&result.dry, "dry", false, "dry")
+	cmd.Flags().BoolVar(&result.verbose, "verbose", false, "verbose")
 
 	result.cmd = cmd
 	return result
