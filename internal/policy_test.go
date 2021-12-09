@@ -58,6 +58,20 @@ func TestPolicyParse(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Nil(t, actual)
 	}
+
+	p4 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<foo_bar>\d+)$`),
+		Extracts: []Extract{
+			{
+				Value:    "<foo_bar>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p4.Parse("123", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"123"}, actual)
+	}
 }
 
 func TestPolicyFilterAndSort(t *testing.T) {
