@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -38,7 +37,7 @@ func TestDetectUpdates(t *testing.T) {
 		if assert.NoError(t, err) {
 			config, err := LoadConfig(bytes)
 			if assert.NoError(t, err) {
-				changes, errs := DetectUpdates("../example", *config, &cacheProvider, false)
+				changes, errs := DetectUpdates("../example", *config, &cacheProvider)
 				if assert.Len(t, changes, 3) {
 					assert.Equal(t, "deployment.yaml", changes[0].File)
 					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, changes[0].Trace)
@@ -62,8 +61,8 @@ func TestDetectUpdates(t *testing.T) {
 					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.10", changes[2].NewValue)
 				}
 				if assert.Len(t, errs, 2) {
-					assert.Equal(t, fmt.Errorf(`annotation {"will":"fail1"} misses registry`), errs[0])
-					assert.Equal(t, fmt.Errorf(`annotation {"will":"fail2"} misses registry`), errs[1])
+					assert.EqualError(t, errs[0], `deployment.yaml:fail: annotation {"will":"fail1"} misses registry`)
+					assert.EqualError(t, errs[1], `helm-release.yaml:fail: annotation {"will":"fail2"} misses registry`)
 				}
 			}
 		}

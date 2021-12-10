@@ -43,7 +43,7 @@ type Action func(dir string, changes Changes) (bool, error)
 var branchPrefix = "git-ops-update"
 
 func (p LocalGitProvider) Push(dir string, changes Changes) (bool, error) {
-	fmt.Printf("Local git provider does not support push mode. Will apply changes to worktree\n")
+	LogWarning("Local git provider does not support push mode. Will apply changes to worktree")
 	err := changes.Push(dir)
 	if err != nil {
 		return false, err
@@ -52,7 +52,7 @@ func (p LocalGitProvider) Push(dir string, changes Changes) (bool, error) {
 }
 
 func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
-	fmt.Printf("Local git provider does not support request mode. Will apply changes to worktree\n")
+	LogWarning("Local git provider does not support request mode. Will apply changes to worktree")
 	return p.Push(dir, changes)
 }
 
