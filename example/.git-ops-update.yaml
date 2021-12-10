@@ -6,16 +6,21 @@ files:
     - '\/system\/.*\.yaml$'
 registries:
   my-docker-registry:
+    type: docker
     interval: 1h
-    docker:
-      url: https://registry-1.docker.io
+    url: https://registry-1.docker.io
   my-helm-registry:
+    type: helm
     interval: 1h
-    helm:
-      url: https://helm.nginx.com/stable
+    url: https://helm.nginx.com/stable
+  my-git-hub-tag-registry:
+    type: git-hub-tag
+    interval: 1h
 policies:
   my-semver-policy:
+    pattern: '^v?(?P<version>.*)$'
     extracts:
-      - semver:
-          pinMajor: yes
-          pinMinor: yes
+      - type: semver
+        value: '<version>'
+        pinMajor: true
+        pinMinor: true

@@ -12,14 +12,15 @@ import (
 )
 
 type UpdateVersionsOptions struct {
-	DryRun bool
+	Dry     bool
+	Verbose bool
 }
 
-func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) []error {
-	changes, errs := DetectUpdates(dir, config)
+func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts UpdateVersionsOptions) []error {
+	changes, errs := DetectUpdates(dir, config, cacheProvider, opts.Verbose)
 
 	for _, c := range changes {
-		if !opts.DryRun {
+		if !opts.Dry {
 			done, err := c.Action(dir, Changes{c})
 			if err != nil {
 				errs = append(errs, err)
@@ -33,18 +34,21 @@ func ApplyUpdates(dir string, config Config, opts UpdateVersionsOptions) []error
 		}
 	}
 
+	if len(changes) == 0 {
+		fmt.Printf("No updates available\n")
+	}
+
 	return errs
 }
 
-func DetectUpdates(dir string, config Config) (Changes, []error) {
-	cacheFile := fileResolvePath(dir, ".git-ops-update.cache.yaml")
-	cache, err := LoadCacheFromFile(cacheFile)
+func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbose bool) (Changes, []error) {
+	cache, err := cacheProvider.Load()
 	if err != nil {
 		fmt.Printf("Unable to read cache: %v\n", err)
 		cache = &Cache{}
 	}
 
-	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
+	files, err := FileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -57,7 +61,9 @@ func DetectUpdates(dir string, config Config) (Changes, []error) {
 			errors = append(errors, err)
 			continue
 		}
-		fmt.Printf("Scanning file %s\n", fileRel)
+		if verbose {
+			fmt.Printf("Scanning file %s\n", fileRel)
+		}
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
@@ -95,7 +101,7 @@ func DetectUpdates(dir string, config Config) (Changes, []error) {
 					Timestamp:    time.Now(),
 				})
 				cache = &nextCache
-				err = SaveCacheToFile(*cache, cacheFile)
+				err = cacheProvider.Save(*cache)
 				if err != nil {
 					return err
 				}
@@ -146,11 +152,6 @@ func DetectUpdates(dir string, config Config) (Changes, []error) {
 		}
 	}
 
-	err = SaveCacheToFile(*cache, cacheFile)
-	if err != nil {
-		errors = append(errors, err)
-	}
-
 	return changes, errors
 }
 
@@ -179,7 +180,7 @@ func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Confi
 	annotation := annotation{}
 	err := utiljson.Unmarshal([]byte(annotationStr), &annotation)
 	if err != nil {
-		return nil, fmt.Errorf("annotation %s malformed: %v", annotationStr, err)
+		return nil, fmt.Errorf("annotation %s malformed: %w", annotationStr, err)
 	}
 
 	if annotation.RegistryName == "" {

@@ -2,20 +2,18 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/ioutil"
 	"runtime/debug"
-	"strings"
 
-	"github.com/choffmeister/git-ops-update/internal"
+	"github.com/airfocusio/git-ops-update/internal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type rootCmd struct {
 	cmd       *cobra.Command
 	directory string
-	dryRun    bool
+	dry       bool
+	verbose   bool
 }
 
 func newRootCmd(version FullVersion) *rootCmd {
@@ -26,61 +24,39 @@ func newRootCmd(version FullVersion) *rootCmd {
 		Short:        "An updater for docker images and helm charts in your infrastructure-as-code repository",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dir, viperInstance, err := initConfig(result)
+			dir := result.directory
+			fileBytes, err := ioutil.ReadFile(internal.FileResolvePath(dir, ".git-ops-update.yaml"))
 			if err != nil {
-				return fmt.Errorf("unable to initialize: %v", err)
+				return fmt.Errorf("unable to initialize: %w", err)
 			}
-			config, err := internal.LoadConfig(*viperInstance)
+			config, err := internal.LoadConfig(fileBytes)
 			if err != nil {
-				return fmt.Errorf("unable to load configuration: %v", err)
+				return fmt.Errorf("unable to load configuration: %w", err)
 			}
-			errs := internal.ApplyUpdates(*dir, *config, internal.UpdateVersionsOptions{
-				DryRun: result.dryRun,
+			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
+			cacheProvider := internal.FileCacheProvider{File: cacheFile}
+			errs := internal.ApplyUpdates(dir, *config, cacheProvider, internal.UpdateVersionsOptions{
+				Dry:     result.dry,
+				Verbose: result.verbose,
 			})
 			if len(errs) > 0 {
-				return fmt.Errorf("unable to update versions: %v", err)
+				// TODO all
+				return fmt.Errorf("unable to update versions: %w", errs[0])
 			}
 			return nil
 		},
 	}
 
 	cmd.PersistentFlags().StringVar(&result.directory, "dir", ".", "dir")
-	cmd.Flags().BoolVar(&result.dryRun, "dry", false, "dry")
+	cmd.Flags().BoolVar(&result.dry, "dry", false, "dry")
+	cmd.Flags().BoolVar(&result.verbose, "verbose", false, "verbose")
 
 	result.cmd = cmd
 	return result
 }
 
-func initConfig(rootCmd *rootCmd) (*string, *viper.Viper, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, nil, err
-	}
-	if !filepath.IsAbs(rootCmd.directory) {
-		dir = filepath.Join(dir, rootCmd.directory)
-	} else {
-		dir = rootCmd.directory
-	}
-
-	viperInstance := viper.New()
-	viperInstance.SetConfigName(".git-ops-update")
-	viperInstance.SetConfigType("yaml")
-	viperInstance.AddConfigPath(dir)
-	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	viperInstance.SetEnvPrefix("GIT_OPS_UPDATE")
-	viperInstance.AutomaticEnv()
-
-	err = viperInstance.ReadInConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &dir, viperInstance, nil
-}
-
 func Execute(version FullVersion) error {
 	rootCmd := newRootCmd(version)
-	initConfig(rootCmd)
 	return rootCmd.cmd.Execute()
 }
 

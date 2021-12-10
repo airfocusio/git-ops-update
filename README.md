@@ -57,14 +57,14 @@ Policies define how you would select and compare different potential new version
 policies:
   my-semver-policy:
     extracts:
-      - semver: {}
+      - type: semver
   my-ubuntu-specific-policy:
     pattern: '^(?P<year>\d+)\.(?P<month>\d+)$'
     extracts:
-      - value: '<year>'
-        numeric: {}
-      - value: '<month>'
-        numeric: {}
+      - type: numeric
+        value: '<year>'
+      - type: numeric
+        value: '<month>'
 ```
 
 ### Annotate your files
@@ -90,17 +90,18 @@ Every value in your configuration can be overwritten by an environment variable,
 ```yaml
 # .git-ops-update.yaml
 registries:
-  my-docker-:
+  my-docker-policy:
+    type: docker
     interval: 1h
-    docker:
-      url: https://registry-1.docker.io
-      credentials:
-        username: my-user
-        password: ""
+    url: https://registry-1.docker.io
+    credentials:
+      username: ${DOCKER_USERNAME}
+      password: ${DOCKER_PASSWORD}
 ```
 
 ```bash
-export GIT_OPS_UPDATE_REGISTRIES_DOCKER_MY_DOCKER_POLICY_CREDENTIALS_PASSWORD=my-pass
+export DOCKER_USERNAME=my-user
+export DOCKER_PASSWORD=my-pass
 git-ops-update
 ```
 
@@ -119,7 +120,7 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: docker://ghcr.io/choffmeister/git-ops-update
+    - uses: docker://ghcr.io/airfocusio/git-ops-update
 ```
 
 ## Installation
@@ -128,6 +129,6 @@ jobs:
 
 ```bash
 cd my-git-directory
-docker pull ghcr.io/choffmeister/git-ops-update:latest
-docker run --rm -v $PWD:/workdir ghcr.io/choffmeister/git-ops-update:latest
+docker pull ghcr.io/airfocusio/git-ops-update:latest
+docker run --rm -v $PWD:/workdir ghcr.io/airfocusio/git-ops-update:latest
 ```

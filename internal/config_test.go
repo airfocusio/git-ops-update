@@ -1,23 +1,19 @@
 package internal
 
 import (
+	"io/ioutil"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfig(t *testing.T) {
-	viperInstance := viper.New()
-	viperInstance.SetConfigName("config_test.yaml")
-	viperInstance.SetConfigType("yaml")
-	viperInstance.AddConfigPath(".")
-	err := viperInstance.ReadInConfig()
+	bytes, err := ioutil.ReadFile("config_test.yaml")
 	assert.NoError(t, err)
 
-	c1, err := LoadConfig(*viperInstance)
+	c1, err := LoadConfig(bytes)
 	assert.NoError(t, err)
 
 	c2 := Config{
@@ -37,6 +33,14 @@ func TestLoadConfig(t *testing.T) {
 			"helm": HelmRegistry{
 				Interval: time.Duration(3600000000000),
 				Url:      "https://charts.helm.sh/stable",
+				Credentials: HttpBasicCredentials{
+					Username: "user",
+					Password: "pass",
+				},
+			},
+			"git-hub": GitHubTagRegistry{
+				Interval: time.Duration(3600000000000),
+				Url:      "https://api.github-enterprise.com",
 				Credentials: HttpBasicCredentials{
 					Username: "user",
 					Password: "pass",

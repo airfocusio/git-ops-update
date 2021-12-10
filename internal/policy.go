@@ -22,6 +22,7 @@ type Extract struct {
 }
 
 type ExtractStrategy interface {
+	IsValid(v string) bool
 	IsCompatible(v1 string, v2 string) bool
 	Compare(v1 string, v2 string) int
 }
@@ -41,7 +42,7 @@ type SemverExtractStrategy struct {
 	AllowPrereleases bool
 }
 
-var extractPattern = regexp.MustCompile(`<([a-zA-Z0-9\-]+)>`)
+var extractPattern = regexp.MustCompile(`<([^>]+)>`)
 
 func (p Policy) Parse(version string, prefix string, suffix string) (*[]string, error) {
 	unpackedVersion := version
@@ -108,6 +109,13 @@ func (l versionParsedList) Less(i, j int) bool {
 			return false
 		}
 	}
+	cmp2 := strings.Compare(a.Version, b.Version)
+	if cmp2 > 0 {
+		return true
+	}
+	if cmp2 < 0 {
+		return false
+	}
 	return false
 }
 
@@ -140,6 +148,12 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 	for _, version := range temp2.Items {
 		isCompatible := true
 		for i, parsed := range version.Parsed {
+			if !temp2.Extracts[i].Strategy.IsValid((*currentVersionParsed)[i]) {
+				return nil, fmt.Errorf("%s has extraction %s which is invalid for selected strategy", currentVersion, (*currentVersionParsed)[i])
+			}
+			if !temp2.Extracts[i].Strategy.IsValid(parsed) {
+				isCompatible = false
+			}
 			if !temp2.Extracts[i].Strategy.IsCompatible((*currentVersionParsed)[i], parsed) {
 				isCompatible = false
 			}
@@ -164,6 +178,10 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string, pref
 	return &currentVersion, nil
 }
 
+func (str LexicographicExtractStrategy) IsValid(v string) bool {
+	return true
+}
+
 func (str LexicographicExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
@@ -181,12 +199,29 @@ func (str LexicographicExtractStrategy) IsCompatible(v1 string, v2 string) bool 
 	return !str.Pin || v1 == v2
 }
 
+func (str NumericExtractStrategy) IsValid(v string) bool {
+	vi, ve := strconv.Atoi(v)
+	if v == "" {
+		vi = 0
+		ve = nil
+	}
+	return ve == nil && vi >= 0
+}
+
 func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
 	}
 	v1i, v1e := strconv.Atoi(v1)
 	v2i, v2e := strconv.Atoi(v2)
+	if v1 == "" {
+		v1i = 0
+		v1e = nil
+	}
+	if v2 == "" {
+		v2i = 0
+		v2e = nil
+	}
 	if v1e != nil {
 		return -1
 	}
@@ -203,21 +238,35 @@ func (str NumericExtractStrategy) Compare(v1 string, v2 string) int {
 }
 
 func (str NumericExtractStrategy) IsCompatible(v1 string, v2 string) bool {
+	if !str.IsValid(v1) || !str.IsValid(v2) {
+		return false
+	}
 	return !str.Pin || v1 == v2
+}
+
+func (str SemverExtractStrategy) IsValid(v string) bool {
+	_, err := semver.Make(v)
+	return err == nil
 }
 
 func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
 	if v1 == v2 {
 		return 0
 	}
-	v1sv, _ := semver.Make(v1)
-	v2sv, _ := semver.Make(v2)
+	v1sv, err1 := semver.Make(v1)
+	v2sv, err2 := semver.Make(v2)
+	if err1 != nil || err2 != nil {
+		return 0
+	}
 	return v1sv.Compare(v2sv)
 }
 
 func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
-	v1sv, _ := semver.Make(v1)
-	v2sv, _ := semver.Make(v2)
+	v1sv, err1 := semver.Make(v1)
+	v2sv, err2 := semver.Make(v2)
+	if err1 != nil || err2 != nil {
+		return false
+	}
 	if str.PinMajor && v1sv.Major != v2sv.Major {
 		return false
 	}

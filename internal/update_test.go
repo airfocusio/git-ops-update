@@ -2,19 +2,15 @@ package internal
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDetectUpdates(t *testing.T) {
-	viperInstance := viper.New()
-	viperInstance.SetConfigName(".git-ops-update")
-	viperInstance.SetConfigType("yaml")
-	viperInstance.AddConfigPath("../example")
-	err := viperInstance.ReadInConfig()
+	bytes, err := ioutil.ReadFile("../example/.git-ops-update.yaml")
 	if assert.NoError(t, err) {
 		cache := Cache{
 			Resources: []CacheResource{
@@ -30,15 +26,20 @@ func TestDetectUpdates(t *testing.T) {
 					Versions:     []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0", "0.11.1"},
 					Timestamp:    time.Now(),
 				},
+				{
+					RegistryName: "my-git-hub-tag-registry",
+					ResourceName: "kubernetes/ingress-nginx",
+					Versions:     []string{"controller-v1.0.0", "controller-v1.0.10", "controller-v1.1.0"},
+					Timestamp:    time.Now(),
+				},
 			},
 		}
-		err = SaveCacheToFile(cache, "../example/.git-ops-update.cache.yaml")
+		cacheProvider := MemoryCacheProvider{Cache: &cache}
 		if assert.NoError(t, err) {
-
-			config, err := LoadConfig(*viperInstance)
+			config, err := LoadConfig(bytes)
 			if assert.NoError(t, err) {
-				changes, errs := DetectUpdates("../example", *config)
-				if assert.Len(t, changes, 2) {
+				changes, errs := DetectUpdates("../example", *config, &cacheProvider, false)
+				if assert.Len(t, changes, 3) {
 					assert.Equal(t, "deployment.yaml", changes[0].File)
 					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, changes[0].Trace)
 					assert.Equal(t, "1.19.0-alpine", changes[0].OldVersion)
@@ -52,6 +53,13 @@ func TestDetectUpdates(t *testing.T) {
 					assert.Equal(t, "0.10.3", changes[1].NewVersion)
 					assert.Equal(t, "0.10.1", changes[1].OldValue)
 					assert.Equal(t, "0.10.3", changes[1].NewValue)
+
+					assert.Equal(t, "kustomization.yaml", changes[2].File)
+					assert.Equal(t, yamlTrace{"bases", 0}, changes[2].Trace)
+					assert.Equal(t, "controller-v1.0.0", changes[2].OldVersion)
+					assert.Equal(t, "controller-v1.0.10", changes[2].NewVersion)
+					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.0", changes[2].OldValue)
+					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.10", changes[2].NewValue)
 				}
 				if assert.Len(t, errs, 2) {
 					assert.Equal(t, fmt.Errorf(`annotation {"will":"fail1"} misses registry`), errs[0])

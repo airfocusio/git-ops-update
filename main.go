@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/choffmeister/git-ops-update/cmd"
+	"github.com/airfocusio/git-ops-update/cmd"
 )
 
 // nolint: gochecknoglobals

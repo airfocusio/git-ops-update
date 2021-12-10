@@ -59,16 +59,16 @@ func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
 func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return false, fmt.Errorf("unable to open git repository: %v", err)
+		return false, fmt.Errorf("unable to open git repository: %w", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("unable to open git worktree: %v", err)
+		return false, fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
 	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
 	if err != nil {
-		return false, fmt.Errorf("unable to commit changes: %v", err)
+		return false, fmt.Errorf("unable to commit changes: %w", err)
 	}
 	err = repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
@@ -77,7 +77,7 @@ func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
 		},
 	})
 	if err != nil {
-		return false, fmt.Errorf("unable to push changes: %v", err)
+		return false, fmt.Errorf("unable to push changes: %w", err)
 	}
 	return true, nil
 }
@@ -85,16 +85,16 @@ func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
 func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return false, fmt.Errorf("unable to open git repository: %v", err)
+		return false, fmt.Errorf("unable to open git repository: %w", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("unable to open git worktree: %v", err)
+		return false, fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
 	remote, err := repo.Remote("origin")
 	if err != nil {
-		return false, fmt.Errorf("unable to get git remote origin: %v", err)
+		return false, fmt.Errorf("unable to get git remote origin: %w", err)
 	}
 	remoteRefs, err := remote.List(&git.ListOptions{
 		Auth: &http.BasicAuth{
@@ -103,7 +103,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 		},
 	})
 	if err != nil {
-		return false, fmt.Errorf("unable to list git branches: %v", err)
+		return false, fmt.Errorf("unable to list git branches: %w", err)
 	}
 	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
 	targetBranchExists := false
@@ -117,15 +117,15 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 	if !targetBranchExists {
 		baseBranch, err := repo.Head()
 		if err != nil {
-			return false, fmt.Errorf("unable to get base branch: %v", err)
+			return false, fmt.Errorf("unable to get base branch: %w", err)
 		}
 		err = worktree.Checkout(&git.CheckoutOptions{Branch: targetBranch, Create: true})
 		if err != nil {
-			return false, fmt.Errorf("unable to create target branch: %v", err)
+			return false, fmt.Errorf("unable to create target branch: %w", err)
 		}
 		_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
 		if err != nil {
-			return false, fmt.Errorf("unable to commit changes: %v", err)
+			return false, fmt.Errorf("unable to commit changes: %w", err)
 		}
 		err = repo.Push(&git.PushOptions{
 			Auth: &http.BasicAuth{
@@ -134,12 +134,12 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 			},
 		})
 		if err != nil {
-			return false, fmt.Errorf("unable to push changes: %v", err)
+			return false, fmt.Errorf("unable to push changes: %w", err)
 		}
 
 		owner, repo, err := extractGitHubOwnerRepoFromRemote(*remote)
 		if err != nil {
-			return false, fmt.Errorf("unable to extract github owner/repository from remote origin: %v", err)
+			return false, fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
 		}
 
 		ctx := context.Background()
@@ -157,13 +157,13 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 			Body:  &pullBody,
 		})
 		if err != nil {
-			return false, fmt.Errorf("unable to create github pull request: %v", err)
+			return false, fmt.Errorf("unable to create github pull request: %w", err)
 		}
 		defer res.Body.Close()
 
 		err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
 		if err != nil {
-			return true, fmt.Errorf("unable to checkout to bae branch: %v", err)
+			return true, fmt.Errorf("unable to checkout to bae branch: %w", err)
 		}
 		return true, nil
 	}

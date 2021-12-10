@@ -58,17 +58,53 @@ func TestPolicyParse(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Nil(t, actual)
 	}
+
+	p4 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<foo_bar>\d+)$`),
+		Extracts: []Extract{
+			{
+				Value:    "<foo_bar>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p4.Parse("123", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"123"}, actual)
+	}
+
+	p5 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)(\.(?P<minor>\d+))?$`),
+		Extracts: []Extract{
+			{
+				Value:    "<major>",
+				Strategy: NumericExtractStrategy{},
+			},
+			{
+				Value:    "<minor>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p5.Parse("1", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1", ""}, actual)
+	}
+	actual, err = p5.Parse("1.2", "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, &[]string{"1", "2"}, actual)
+	}
 }
 
 func TestPolicyFilterAndSort(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FilterAndSort("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, []string{"1", "2", "3"}, *actual)
+		assert.Equal(t, []string{"3", "2", "1"}, *actual)
 	}
 
 	p2 := Policy{
-		Pattern: regexp.MustCompile(`^(?P<major>\d+)\.(?P<minor>\d+)$`),
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)\.(?P<minor>\d+)(-.*)?$`),
 		Extracts: []Extract{
 			{
 				Value:    "<major>",
@@ -92,13 +128,43 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	assert.Error(t, err)
 	_, err = p2.FilterAndSort("1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu")
 	assert.Error(t, err)
+	actual, err = p2.FilterAndSort("1.0", strings.Split("1.2 1.10 2.1 2.10", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+	}
+	actual, err = p2.FilterAndSort("1.0", strings.Split("1.10 1.2 2.10 2.1", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+	}
+	actual, err = p2.FilterAndSort("1.0", strings.Split("2.10-a 1.10 1.2 2.10 2.1 1.10-b 1.10-c 1.10-a", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.10-a 2.10 2.1 1.10-c 1.10-b 1.10-a 1.10 1.2", " "), *actual)
+	}
+
+	p3 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<major>\d+)(\.(?P<minor>\d+))?$`),
+		Extracts: []Extract{
+			{
+				Value:    "<major>",
+				Strategy: NumericExtractStrategy{},
+			},
+			{
+				Value:    "<minor>",
+				Strategy: NumericExtractStrategy{},
+			},
+		},
+	}
+	actual, err = p3.FilterAndSort("1.2", strings.Split("1.0 2 1 1.1 1.2 1.3 2.0", " "), "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, strings.Split("2.0 2 1.3 1.2 1.1 1.0 1", " "), *actual)
+	}
 }
 
 func TestPolicyFindNext(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FindNext("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, "1", *actual)
+		assert.Equal(t, "3", *actual)
 	}
 
 	p2 := Policy{
@@ -177,6 +243,17 @@ func TestLexicographicSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, false, LexicographicExtractStrategy{Pin: true}.IsCompatible("1", "2"))
 }
 
+func TestNumericSortStrategyIsValid(t *testing.T) {
+	str := NumericExtractStrategy{}
+
+	assert.Equal(t, true, str.IsValid("0"))
+	assert.Equal(t, true, str.IsValid("1"))
+	assert.Equal(t, true, str.IsValid("2"))
+	assert.Equal(t, false, str.IsValid("-1"))
+	assert.Equal(t, false, str.IsValid("a"))
+	assert.Equal(t, true, str.IsValid(""))
+}
+
 func TestNumericSortStrategyCompare(t *testing.T) {
 	str := NumericExtractStrategy{}
 
@@ -197,6 +274,17 @@ func TestNumericSortStrategyIsCompatible(t *testing.T) {
 	assert.Equal(t, true, NumericExtractStrategy{}.IsCompatible("1", "2"))
 	assert.Equal(t, true, NumericExtractStrategy{Pin: true}.IsCompatible("1", "1"))
 	assert.Equal(t, false, NumericExtractStrategy{Pin: true}.IsCompatible("1", "2"))
+}
+
+func TestSemverSortStrategyIsValid(t *testing.T) {
+	str := SemverExtractStrategy{}
+
+	assert.Equal(t, true, str.IsValid("0.0.0"))
+	assert.Equal(t, true, str.IsValid("1.2.3"))
+	assert.Equal(t, true, str.IsValid("1.2.3-rc.1"))
+	assert.Equal(t, false, str.IsValid("v1.2.3"))
+	assert.Equal(t, false, str.IsValid("1.2"))
+	assert.Equal(t, false, str.IsValid(""))
 }
 
 func TestSemverSortStrategyCompare(t *testing.T) {

@@ -68,17 +68,8 @@ func visitYamlRecursion(trace yamlTrace, yamlNode *yaml.Node, fn func(trace yaml
 		for i := 0; i < len(yamlNode.Content); i += 2 {
 			keyNode := yamlNode.Content[i]
 			valueNode := yamlNode.Content[i+1]
-			if valueNode.Kind == yaml.ScalarNode {
-				err := fn(trace.Next(keyNode.Value), valueNode)
-				if err != nil {
-					errors = append(errors, err)
-				}
-			} else {
-				errs := visitYamlRecursion(trace.Next(keyNode.Value), valueNode, fn)
-				if len(errs) > 0 {
-					errors = append(errors, errs...)
-				}
-			}
+			errs := visitYamlRecursion(trace.Next(keyNode.Value), valueNode, fn)
+			errors = append(errors, errs...)
 		}
 	} else if yamlNode.Kind == yaml.SequenceNode {
 		for i, child := range yamlNode.Content {
@@ -86,6 +77,11 @@ func visitYamlRecursion(trace yamlTrace, yamlNode *yaml.Node, fn func(trace yaml
 			if len(errs) > 0 {
 				errors = append(errors, errs...)
 			}
+		}
+	} else if yamlNode.Kind == yaml.ScalarNode {
+		err := fn(trace, yamlNode)
+		if err != nil {
+			errors = append(errors, err)
 		}
 	} else {
 		for _, child := range yamlNode.Content {
