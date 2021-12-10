@@ -90,6 +90,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 			var availableVersions []string
 			cachedResource := cache.FindResource(annotation.RegistryName, annotation.ResourceName)
 			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*annotation.Registry).GetInterval())).Before(time.Now()) {
+				LogDebug("Fetching new versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
 				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
 					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
@@ -107,6 +108,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 				}
 			} else {
+				LogDebug("Using cached versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
 				availableVersions = cachedResource.Versions
 			}
 
