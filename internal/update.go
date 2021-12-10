@@ -12,22 +12,29 @@ import (
 )
 
 type UpdateVersionResult struct {
-	Error   error
-	Change  *Change
-	Done    bool
-	Skipped bool
+	Error  error
+	Change *Change
+
+	SkipMessage string
 }
 
 func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bool) []UpdateVersionResult {
 	result := DetectUpdates(dir, config, cacheProvider)
 
-	if !dry {
-		for i := range result {
-			result := result[i]
-			if result.Error == nil && result.Change != nil {
-				done, err := result.Change.Action(dir, Changes{*result.Change})
-				result.Done = done
-				result.Error = err
+	for i := range result {
+		result := &result[i]
+		if result.Error == nil && result.Change != nil {
+			if !dry {
+				changes := Changes{*result.Change}
+				if result.Change.Action == nil {
+					result.SkipMessage = "marked as disabled"
+				} else if result.Change.Action.AlreadyApplied(dir, changes) {
+					result.SkipMessage = "already applied"
+				} else {
+					result.Error = result.Change.Action.Apply(dir, changes)
+				}
+			} else {
+				result.SkipMessage = "dry run"
 			}
 		}
 	}

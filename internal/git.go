@@ -20,8 +20,9 @@ type Git struct {
 }
 
 type GitProvider interface {
-	Push(dir string, changes Changes) (bool, error)
-	Request(dir string, changes Changes) (bool, error)
+	Push(dir string, changes Changes) error
+	Request(dir string, changes Changes) error
+	AlreadyRequested(dir string, changes Changes) bool
 }
 
 type GitAuthor struct {
@@ -38,37 +39,43 @@ type GitHubGitProvider struct {
 	AccessToken string
 }
 
-type Action func(dir string, changes Changes) (bool, error)
+const branchPrefix = "git-ops-update"
 
-var branchPrefix = "git-ops-update"
+var localGitProviderWarned = false
 
-func (p LocalGitProvider) Push(dir string, changes Changes) (bool, error) {
-	LogWarning("Local git provider does not support push mode. Will apply changes to worktree")
-	err := changes.Push(dir)
-	if err != nil {
-		return false, err
+func (p LocalGitProvider) Push(dir string, changes Changes) error {
+	if !localGitProviderWarned {
+		localGitProviderWarned = true
+		LogWarning("Local git provider does not support push mode. Will apply changes to worktree")
 	}
-	return true, nil
+	return changes.Push(dir)
 }
 
-func (p LocalGitProvider) Request(dir string, changes Changes) (bool, error) {
-	LogWarning("Local git provider does not support request mode. Will apply changes to worktree")
+func (p LocalGitProvider) Request(dir string, changes Changes) error {
+	if !localGitProviderWarned {
+		localGitProviderWarned = true
+		LogWarning("Local git provider does not support push mode. Will apply changes to worktree")
+	}
 	return p.Push(dir, changes)
 }
 
-func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
+func (p LocalGitProvider) AlreadyRequested(dir string, changes Changes) bool {
+	return false
+}
+
+func (p GitHubGitProvider) Push(dir string, changes Changes) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return false, fmt.Errorf("unable to open git repository: %w", err)
+		return fmt.Errorf("unable to open git repository: %w", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("unable to open git worktree: %w", err)
+		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
 	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
 	if err != nil {
-		return false, fmt.Errorf("unable to commit changes: %w", err)
+		return fmt.Errorf("unable to commit changes: %w", err)
 	}
 	err = repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
@@ -77,24 +84,91 @@ func (p GitHubGitProvider) Push(dir string, changes Changes) (bool, error) {
 		},
 	})
 	if err != nil {
-		return false, fmt.Errorf("unable to push changes: %w", err)
+		return fmt.Errorf("unable to push changes: %w", err)
 	}
-	return true, nil
+	return nil
 }
 
-func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
+func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		return false, fmt.Errorf("unable to open git repository: %w", err)
+		return fmt.Errorf("unable to open git repository: %w", err)
 	}
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return false, fmt.Errorf("unable to open git worktree: %w", err)
+		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
 	remote, err := repo.Remote("origin")
 	if err != nil {
-		return false, fmt.Errorf("unable to get git remote origin: %w", err)
+		return fmt.Errorf("unable to get git remote origin: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to list git branches: %w", err)
+	}
+	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
+
+	baseBranch, err := repo.Head()
+	if err != nil {
+		return fmt.Errorf("unable to get base branch: %w", err)
+	}
+	err = worktree.Checkout(&git.CheckoutOptions{Branch: targetBranch, Create: true})
+	if err != nil {
+		return fmt.Errorf("unable to create target branch: %w", err)
+	}
+	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
+	if err != nil {
+		return fmt.Errorf("unable to commit changes: %w", err)
+	}
+	err = repo.Push(&git.PushOptions{
+		Auth: &http.BasicAuth{
+			Username: "api",
+			Password: p.AccessToken,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("unable to push changes: %w", err)
+	}
+
+	owner, repoName, err := extractGitHubOwnerRepoFromRemote(*remote)
+	if err != nil {
+		return fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
+	}
+
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+	pullTitle := "Update"
+	pullBase := string(baseBranch.Name())
+	pullHead := string(targetBranch)
+	pullBody := changes.Message()
+	_, res, err := client.PullRequests.Create(context.Background(), *owner, *repoName, &github.NewPullRequest{
+		Title: &pullTitle,
+		Base:  &pullBase,
+		Head:  &pullHead,
+		Body:  &pullBody,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create github pull request: %w", err)
+	}
+	defer res.Body.Close()
+
+	err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
+	if err != nil {
+		return fmt.Errorf("unable to checkout to bae branch: %w", err)
+	}
+	return nil
+}
+
+func (p GitHubGitProvider) AlreadyRequested(dir string, changes Changes) bool {
+	repo, err := git.PlainOpen(dir)
+	if err != nil {
+		return false
+	}
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		return false
 	}
 	remoteRefs, err := remote.List(&git.ListOptions{
 		Auth: &http.BasicAuth{
@@ -103,7 +177,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 		},
 	})
 	if err != nil {
-		return false, fmt.Errorf("unable to list git branches: %w", err)
+		return false
 	}
 	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
 	targetBranchExists := false
@@ -113,62 +187,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) (bool, error) {
 			break
 		}
 	}
-
-	if !targetBranchExists {
-		baseBranch, err := repo.Head()
-		if err != nil {
-			return false, fmt.Errorf("unable to get base branch: %w", err)
-		}
-		err = worktree.Checkout(&git.CheckoutOptions{Branch: targetBranch, Create: true})
-		if err != nil {
-			return false, fmt.Errorf("unable to create target branch: %w", err)
-		}
-		_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author)
-		if err != nil {
-			return false, fmt.Errorf("unable to commit changes: %w", err)
-		}
-		err = repo.Push(&git.PushOptions{
-			Auth: &http.BasicAuth{
-				Username: "api",
-				Password: p.AccessToken,
-			},
-		})
-		if err != nil {
-			return false, fmt.Errorf("unable to push changes: %w", err)
-		}
-
-		owner, repo, err := extractGitHubOwnerRepoFromRemote(*remote)
-		if err != nil {
-			return false, fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
-		}
-
-		ctx := context.Background()
-		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
-		tc := oauth2.NewClient(ctx, ts)
-		client := github.NewClient(tc)
-		pullTitle := "Update"
-		pullBase := string(baseBranch.Name())
-		pullHead := string(targetBranch)
-		pullBody := changes.Message()
-		_, res, err := client.PullRequests.Create(context.Background(), *owner, *repo, &github.NewPullRequest{
-			Title: &pullTitle,
-			Base:  &pullBase,
-			Head:  &pullHead,
-			Body:  &pullBody,
-		})
-		if err != nil {
-			return false, fmt.Errorf("unable to create github pull request: %w", err)
-		}
-		defer res.Body.Close()
-
-		err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
-		if err != nil {
-			return true, fmt.Errorf("unable to checkout to bae branch: %w", err)
-		}
-		return true, nil
-	}
-
-	return false, nil
+	return targetBranchExists
 }
 
 func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, message string, author GitAuthor) (*plumbing.Hash, error) {
@@ -200,28 +219,4 @@ func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, erro
 		}
 	}
 	return nil, nil, fmt.Errorf("non of the git remote %s urls %v could be recognized as a github repository", remote.Config().Name, remote.Config().URLs)
-}
-
-func getAction(p GitProvider, actionName string) (*Action, error) {
-	switch actionName {
-	case "":
-		return getAction(p, "push")
-	case "disabled":
-		fn := Action(func(dir string, changes Changes) (bool, error) {
-			return false, nil
-		})
-		return &fn, nil
-	case "push":
-		fn := Action(func(dir string, changes Changes) (bool, error) {
-			return p.Push(dir, changes)
-		})
-		return &fn, nil
-	case "request":
-		fn := Action(func(dir string, changes Changes) (bool, error) {
-			return p.Request(dir, changes)
-		})
-		return &fn, nil
-	default:
-		return nil, fmt.Errorf("unknown action %s", actionName)
-	}
 }

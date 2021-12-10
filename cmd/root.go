@@ -51,12 +51,12 @@ func newRootCmd(version FullVersion) *rootCmd {
 				if r.Error != nil {
 					errorCount += 1
 					internal.LogError("%v", r.Error)
-				} else if r.Skipped && r.Change != nil {
-					internal.LogDebug("At %s:%s the version could have been updated from %s to %s but as skipped", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
-				} else if !r.Done && r.Change != nil {
-					internal.LogInfo("At %s:%s the version can be updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
-				} else if r.Change != nil {
-					internal.LogInfo("At %s:%s the version was updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
+				} else if r.SkipMessage == "dry run" {
+					internal.LogInfo("%s:%s the version could be updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
+				} else if r.SkipMessage != "" {
+					internal.LogDebug("%s:%s the version could have been updated from %s to %s but as skipped (%s)", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion, r.SkipMessage)
+				} else {
+					internal.LogInfo("%s:%s the version was updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
 				}
 			}
 
