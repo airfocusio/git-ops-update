@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -130,11 +131,11 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 		return fmt.Errorf("unable to push changes: %w", err)
 	}
 
-	owner, repoName, err := extractGitHubOwnerRepoFromRemote(*remote)
+	ownerName, repoName, err := extractGitHubOwnerRepoFromRemote(*remote)
 	if err != nil {
 		return fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
 	}
-
+	LogDebug("Creating pull request to GitHub repository %s/%s", *ownerName, *repoName)
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
 	tc := oauth2.NewClient(ctx, ts)
@@ -143,7 +144,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes) error {
 	pullBase := string(baseBranch.Name())
 	pullHead := string(targetBranch)
 	pullBody := changes.Message()
-	_, res, err := client.PullRequests.Create(context.Background(), *owner, *repoName, &github.NewPullRequest{
+	_, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
 		Title: &pullTitle,
 		Base:  &pullBase,
 		Head:  &pullHead,
@@ -206,16 +207,18 @@ func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, me
 }
 
 func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, error) {
-	httpRegex := regexp.MustCompile(`^https://github.com/(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)?$`)
-	sshRegex := regexp.MustCompile(`^git@github.com:(?P<owner>[^/]+)/(?P<repo>.*)(?:\.git)?$`)
+	httpRegex := regexp.MustCompile(`^https://github.com/(?P<owner>[^/]+)/(?P<repo>.*)$`)
+	sshRegex := regexp.MustCompile(`^git@github.com:(?P<owner>[^/]+)/(?P<repo>.*)$`)
 	for _, url := range remote.Config().URLs {
 		httpMatch := httpRegex.FindStringSubmatch(url)
 		if httpMatch != nil {
-			return &httpMatch[1], &httpMatch[2], nil
+			repoName := strings.TrimSuffix(httpMatch[2], ".git")
+			return &httpMatch[1], &repoName, nil
 		}
 		sshMatch := sshRegex.FindStringSubmatch(url)
 		if sshMatch != nil {
-			return &sshMatch[1], &sshMatch[2], nil
+			repoName := strings.TrimSuffix(sshMatch[2], ".git")
+			return &sshMatch[1], &repoName, nil
 		}
 	}
 	return nil, nil, fmt.Errorf("non of the git remote %s urls %v could be recognized as a github repository", remote.Config().Name, remote.Config().URLs)
