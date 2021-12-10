@@ -44,13 +44,23 @@ func newRootCmd(version FullVersion) *rootCmd {
 			}
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
-			errs := internal.ApplyUpdates(dir, *config, cacheProvider, internal.UpdateVersionsOptions{
-				Dry: result.dry,
-			})
-			if len(errs) > 0 {
-				for _, err := range errs {
-					internal.LogError("%v", err)
+			result := internal.ApplyUpdates(dir, *config, cacheProvider, result.dry)
+
+			errorCount := 0
+			for _, r := range result {
+				if r.Error != nil {
+					errorCount += 1
+					internal.LogError("%v", r.Error)
+				} else if r.Skipped && r.Change != nil {
+					internal.LogDebug("At %s:%s the version could have been updated from %s to %s but as skipped", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
+				} else if !r.Done && r.Change != nil {
+					internal.LogInfo("At %s:%s the version can be updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
+				} else if r.Change != nil {
+					internal.LogInfo("At %s:%s the version was updated from %s to %s", r.Change.File, r.Change.Trace.ToString(), r.Change.OldVersion, r.Change.NewVersion)
 				}
+			}
+
+			if errorCount > 0 {
 				os.Exit(1)
 			}
 		},
