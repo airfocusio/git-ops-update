@@ -20,7 +20,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
 
-require github.com/fatih/color v1.13.0
+require (
+	github.com/fatih/color v1.13.0
+	github.com/go-git/go-billy/v5 v5.3.1
+)
 
 require (
 	github.com/Microsoft/go-winio v0.5.1 // indirect
@@ -30,7 +33,6 @@ require (
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
-	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect

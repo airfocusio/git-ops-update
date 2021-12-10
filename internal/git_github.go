@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
@@ -56,7 +58,6 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
-
 	remote, err := repo.Remote("origin")
 	if err != nil {
 		return fmt.Errorf("unable to get git remote origin: %w", err)
@@ -158,7 +159,14 @@ func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, me
 	if err != nil {
 		return nil, err
 	}
-	_, err = worktree.Add(".")
+	excludes, err := gitignore.ReadPatterns(osfs.New(dir), []string{})
+	if err != nil {
+		return nil, err
+	}
+	worktree.Excludes = excludes
+	err = worktree.AddWithOptions(&git.AddOptions{
+		All: true,
+	})
 	if err != nil {
 		return nil, err
 	}
