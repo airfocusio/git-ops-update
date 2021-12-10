@@ -77,3 +77,13 @@ func validateName(name string) bool {
 	nameRegex := regexp.MustCompile(`^([a-z0-9\-]+)$`)
 	return nameRegex.MatchString(name)
 }
+
+func runCallbacks(callbacks []func() error) error {
+	for _, cb := range callbacks {
+		err := cb()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

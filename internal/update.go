@@ -31,7 +31,10 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bo
 				} else if result.Change.Action.AlreadyApplied(dir, changes) {
 					result.SkipMessage = "already applied"
 				} else {
-					result.Error = result.Change.Action.Apply(dir, changes)
+					err := result.Change.Action.Apply(dir, changes)
+					if err != nil {
+						result.Error = fmt.Errorf("%s:%s: %w", result.Change.File, result.Change.Trace.ToString(), err)
+					}
 				}
 			} else {
 				result.SkipMessage = "dry run"
@@ -163,8 +166,9 @@ type annotation struct {
 	Format       *Format
 	ActionName   string `json:"action"`
 	Action       *Action
-	Prefix       string `json:"prefix"`
-	Suffix       string `json:"suffix"`
+	Prefix       string   `json:"prefix"`
+	Suffix       string   `json:"suffix"`
+	Exec         []string `json:"exec"`
 }
 
 func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Config) (*annotation, error) {
@@ -209,7 +213,7 @@ func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Confi
 	}
 	annotation.Format = format
 
-	action, err := getAction(config.Git.Provider, annotation.ActionName)
+	action, err := getAction(config.Git.Provider, annotation.ActionName, annotation.Exec)
 	if err != nil {
 		return nil, err
 	}
