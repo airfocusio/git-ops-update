@@ -147,7 +147,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 			rp := RawConfigRegistryDocker{}
 			err := decode(r, &rp)
 			if err != nil {
-				return nil, fmt.Errorf("registry %s is invalid: %v", rn, err)
+				return nil, fmt.Errorf("registry %s is invalid: %w", rn, err)
 			}
 			registries[rn] = DockerRegistry{
 				Interval: rp.Interval,
@@ -161,7 +161,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 			rp := RawConfigRegistryHelm{}
 			err := decode(r, &rp)
 			if err != nil {
-				return nil, fmt.Errorf("registry %s is invalid: %v", rn, err)
+				return nil, fmt.Errorf("registry %s is invalid: %w", rn, err)
 			}
 			registries[rn] = HelmRegistry{
 				Interval: rp.Interval,
@@ -175,7 +175,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 			rp := RawConfigRegistryGitHubTag{}
 			err := decode(r, &rp)
 			if err != nil {
-				return nil, fmt.Errorf("registry %s is invalid: %v", rn, err)
+				return nil, fmt.Errorf("registry %s is invalid: %w", rn, err)
 			}
 			registries[rn] = GitHubTagRegistry{
 				Interval: rp.Interval,
@@ -206,7 +206,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				ep := RawConfigPolicyExtractLexicographicStrategy{}
 				err := decode(e, &ep)
 				if err != nil {
-					return nil, fmt.Errorf("policy extract %s/%d is invalid: %v", pn, ei, err)
+					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
 				extracts = append(extracts, Extract{Value: ep.Value, Strategy: LexicographicExtractStrategy{
 					Pin: ep.Pin,
@@ -215,7 +215,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				ep := RawConfigPolicyExtractNumericStrategy{}
 				err := decode(e, &ep)
 				if err != nil {
-					return nil, fmt.Errorf("policy extract %s/%d is invalid: %v", pn, ei, err)
+					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
 				extracts = append(extracts, Extract{Value: ep.Value, Strategy: NumericExtractStrategy{
 					Pin: ep.Pin,
@@ -224,7 +224,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				ep := RawConfigPolicyExtractSemverStrategy{}
 				err := decode(e, &ep)
 				if err != nil {
-					return nil, fmt.Errorf("policy extract %s/%d is invalid: %v", pn, ei, err)
+					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
 				extracts = append(extracts, Extract{Value: ep.Value, Strategy: SemverExtractStrategy{
 					PinMajor:         ep.PinMajor,

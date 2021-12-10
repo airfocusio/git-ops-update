@@ -27,11 +27,11 @@ func newRootCmd(version FullVersion) *rootCmd {
 			dir := result.directory
 			fileBytes, err := ioutil.ReadFile(internal.FileResolvePath(dir, ".git-ops-update.yaml"))
 			if err != nil {
-				return fmt.Errorf("unable to initialize: %v", err)
+				return fmt.Errorf("unable to initialize: %w", err)
 			}
 			config, err := internal.LoadConfig(fileBytes)
 			if err != nil {
-				return fmt.Errorf("unable to load configuration: %v", err)
+				return fmt.Errorf("unable to load configuration: %w", err)
 			}
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
@@ -40,7 +40,7 @@ func newRootCmd(version FullVersion) *rootCmd {
 				Verbose: result.verbose,
 			})
 			if err != nil {
-				return fmt.Errorf("unable to update versions: %v", err)
+				return fmt.Errorf("unable to update versions: %w", err)
 			}
 			return nil
 		},

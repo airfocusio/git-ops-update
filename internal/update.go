@@ -178,7 +178,7 @@ func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Confi
 	annotation := annotation{}
 	err := utiljson.Unmarshal([]byte(annotationStr), &annotation)
 	if err != nil {
-		return nil, fmt.Errorf("annotation %s malformed: %v", annotationStr, err)
+		return nil, fmt.Errorf("annotation %s malformed: %w", annotationStr, err)
 	}
 
 	if annotation.RegistryName == "" {
