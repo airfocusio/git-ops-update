@@ -12,26 +12,27 @@ import (
 )
 
 type rootCmd struct {
-	cmd       *cobra.Command
-	directory string
-	dry       bool
-	verbose   bool
-	noColor   bool
+	cmd          *cobra.Command
+	directory    string
+	dry          bool
+	verbose      bool
+	ignoreErrors bool
+	noColor      bool
 }
 
 func newRootCmd(version FullVersion) *rootCmd {
-	result := &rootCmd{}
+	cmdCfg := &rootCmd{}
 	cmd := &cobra.Command{
 		Version:      version.Version,
 		Use:          "git-ops-update",
 		Short:        "An updater for docker images and helm charts in your infrastructure-as-code repository",
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			internal.SetLogVerbosity(result.verbose)
-			if result.noColor {
+			internal.SetLogVerbosity(cmdCfg.verbose)
+			if cmdCfg.noColor {
 				color.NoColor = true
 			}
-			dir := result.directory
+			dir := cmdCfg.directory
 			fileBytes, err := ioutil.ReadFile(internal.FileResolvePath(dir, ".git-ops-update.yaml"))
 			if err != nil {
 				internal.LogError("Unable to initialize: %v", err)
@@ -44,7 +45,7 @@ func newRootCmd(version FullVersion) *rootCmd {
 			}
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
-			result := internal.ApplyUpdates(dir, *config, cacheProvider, result.dry)
+			result := internal.ApplyUpdates(dir, *config, cacheProvider, cmdCfg.dry)
 
 			errorCount := 0
 			for _, r := range result {
@@ -60,18 +61,19 @@ func newRootCmd(version FullVersion) *rootCmd {
 				}
 			}
 
-			if errorCount > 0 {
+			if errorCount > 0 && !cmdCfg.ignoreErrors {
 				os.Exit(1)
 			}
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&result.directory, "dir", ".", "dir")
-	cmd.Flags().BoolVar(&result.dry, "dry", false, "dry")
-	cmd.Flags().BoolVar(&result.verbose, "verbose", false, "verbose")
-	cmd.Flags().BoolVar(&result.noColor, "no-color", false, "no-color")
-	result.cmd = cmd
-	return result
+	cmd.PersistentFlags().StringVar(&cmdCfg.directory, "dir", ".", "dir")
+	cmd.Flags().BoolVar(&cmdCfg.dry, "dry", false, "dry")
+	cmd.Flags().BoolVar(&cmdCfg.verbose, "verbose", false, "verbose")
+	cmd.Flags().BoolVar(&cmdCfg.ignoreErrors, "ignore-errors", false, "ignore-errors")
+	cmd.Flags().BoolVar(&cmdCfg.noColor, "no-color", false, "no-color")
+	cmdCfg.cmd = cmd
+	return cmdCfg
 }
 
 func Execute(version FullVersion) error {
