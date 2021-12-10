@@ -17,7 +17,7 @@ var infoC = color.New(color.FgGreen).SprintFunc()("info ")
 var warningC = color.New(color.FgYellow).SprintFunc()("warn ")
 var errorC = color.New(color.FgRed).SprintFunc()("error")
 
-func logDebug(msg string, args ...interface{}) {
+func LogDebug(msg string, args ...interface{}) {
 	if verbose {
 		fmt.Printf("[%s] %s\n", debugC, fmt.Sprintf(msg, args...))
 	}

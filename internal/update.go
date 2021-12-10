@@ -26,15 +26,13 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts U
 				continue
 			}
 			if done {
-				LogInfo("%s", c.Message())
+				LogInfo("%s:%s was updated from %s to %s", c.File, c.Trace.ToString(), c.OldValue, c.NewValue)
+			} else {
+				LogDebug("%s:%s could have been updated from %s to %s but as skipped", c.File, c.Trace.ToString(), c.OldValue, c.NewValue)
 			}
 		} else {
-			LogInfo("%s", c.Message())
+			LogInfo("%s:%s can be updated from %s to %s", c.File, c.Trace.ToString(), c.OldValue, c.NewValue)
 		}
-	}
-
-	if len(changes) == 0 {
-		LogInfo("No updates available")
 	}
 
 	return errs
@@ -60,7 +58,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) (Chan
 			errors = append(errors, err)
 			continue
 		}
-		logDebug("Scanning file %s", fileRel)
+		LogDebug("Scanning file %s", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
