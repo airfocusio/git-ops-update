@@ -11,67 +11,59 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type UpdateVersionsOptions struct {
-	Dry     bool
-	Verbose bool
+type UpdateVersionResult struct {
+	Error   error
+	Change  *Change
+	Done    bool
+	Skipped bool
 }
 
-func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, opts UpdateVersionsOptions) error {
-	changes, err := DetectUpdates(dir, config, cacheProvider, opts.Verbose)
-	if err != nil {
-		return err
-	}
+func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bool) []UpdateVersionResult {
+	result := DetectUpdates(dir, config, cacheProvider)
 
-	for _, c := range *changes {
-		if !opts.Dry {
-			done, err := c.Action(dir, Changes{c})
-			if err != nil {
-				return err
+	if !dry {
+		for i := range result {
+			result := result[i]
+			if result.Error == nil && result.Change != nil {
+				done, err := result.Change.Action(dir, Changes{*result.Change})
+				result.Done = done
+				result.Error = err
 			}
-			if done {
-				fmt.Printf("%s\n", c.Message())
-			}
-		} else {
-			fmt.Printf("%s\n", c.Message())
 		}
 	}
 
-	if len(*changes) == 0 {
-		fmt.Printf("No updates available\n")
-	}
-
-	return nil
+	return result
 }
 
-func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbose bool) (*Changes, error) {
+func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []UpdateVersionResult {
 	cache, err := cacheProvider.Load()
 	if err != nil {
-		fmt.Printf("Unable to read cache: %v\n", err)
+		LogWarning("Unable to read cache: %v", err)
 		cache = &Cache{}
 	}
 
 	files, err := FileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
-		return nil, err
+		return []UpdateVersionResult{{Error: err}}
 	}
 
-	changes := Changes{}
+	result := []UpdateVersionResult{}
 	for _, file := range *files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
-			return nil, err
+			result = append(result, UpdateVersionResult{Error: err})
+			continue
 		}
-		if verbose {
-			fmt.Printf("Scanning file %s\n", fileRel)
-		}
+		LogDebug("Scanning file %s", fileRel)
 
 		fileDoc := &yaml.Node{}
 		err = fileReadYaml(file, fileDoc)
 		if err != nil {
-			return nil, err
+			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
+			continue
 		}
 
-		err = VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
+		errs := VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
 			lineComment := strings.TrimPrefix(yamlNode.LineComment, "#")
 			if lineComment == "" {
 				return nil
@@ -79,7 +71,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 
 			annotation, err := parseAnnotation(*yamlNode, lineComment, config)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 			}
 			if annotation == nil {
 				return nil
@@ -90,7 +82,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*annotation.Registry).GetInterval())).Before(time.Now()) {
 				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
-					return err
+					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 				}
 				availableVersions = *versions
 				nextCache := cache.UpdateResource(CacheResource{
@@ -102,7 +94,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 				cache = &nextCache
 				err = cacheProvider.Save(*cache)
 				if err != nil {
-					return err
+					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 				}
 			} else {
 				availableVersions = cachedResource.Versions
@@ -111,11 +103,11 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 			currentValue := yamlNode.Value
 			currentVersion, err := (*annotation.Format).ExtractVersion(currentValue)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 			}
 			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 			}
 
 			if *currentVersion != *nextVersion {
@@ -128,9 +120,9 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 				}
 				nextValue, err := (*annotation.Format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
-					return err
+					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 				}
-				changes = append(changes, Change{
+				change := Change{
 					RegistryName: annotation.RegistryName,
 					ResourceName: annotation.ResourceName,
 					OldVersion:   *currentVersion,
@@ -140,17 +132,18 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider, verbo
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
 					Action:       *annotation.Action,
-				})
+				}
+				result = append(result, UpdateVersionResult{Change: &change})
 			}
 
 			return nil
 		})
-		if err != nil {
-			return nil, err
+		for _, err := range errs {
+			result = append(result, UpdateVersionResult{Error: err})
 		}
 	}
 
-	return &changes, nil
+	return result
 }
 
 type annotation struct {

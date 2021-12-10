@@ -37,30 +37,45 @@ func TestDetectUpdates(t *testing.T) {
 		if assert.NoError(t, err) {
 			config, err := LoadConfig(bytes)
 			if assert.NoError(t, err) {
-				changes, err := DetectUpdates("../example", *config, &cacheProvider, false)
-				if assert.NoError(t, err) {
-					assert.Len(t, *changes, 3)
+				result := DetectUpdates("../example", *config, &cacheProvider)
+				if assert.Len(t, result, 5) {
+					if assert.NotNil(t, result[0].Change) {
+						change := result[0].Change
+						assert.Equal(t, "deployment.yaml", change.File)
+						assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, change.Trace)
+						assert.Equal(t, "1.19.0-alpine", change.OldVersion)
+						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
+						assert.Equal(t, "nginx:1.19.0-alpine", change.OldValue)
+						assert.Equal(t, "nginx:1.19.1-alpine", change.NewValue)
+					}
 
-					assert.Equal(t, "deployment.yaml", (*changes)[0].File)
-					assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, (*changes)[0].Trace)
-					assert.Equal(t, "1.19.0-alpine", (*changes)[0].OldVersion)
-					assert.Equal(t, "1.19.1-alpine", (*changes)[0].NewVersion)
-					assert.Equal(t, "nginx:1.19.0-alpine", (*changes)[0].OldValue)
-					assert.Equal(t, "nginx:1.19.1-alpine", (*changes)[0].NewValue)
+					if assert.NotNil(t, result[1].Error) {
+						assert.EqualError(t, result[1].Error, `deployment.yaml:fail: annotation {"will":"fail1"} misses registry`)
+					}
 
-					assert.Equal(t, "helm-release.yaml", (*changes)[1].File)
-					assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, (*changes)[1].Trace)
-					assert.Equal(t, "0.10.1", (*changes)[1].OldVersion)
-					assert.Equal(t, "0.10.3", (*changes)[1].NewVersion)
-					assert.Equal(t, "0.10.1", (*changes)[1].OldValue)
-					assert.Equal(t, "0.10.3", (*changes)[1].NewValue)
+					if assert.NotNil(t, result[2].Change) {
+						change := result[2].Change
+						assert.Equal(t, "helm-release.yaml", change.File)
+						assert.Equal(t, yamlTrace{"spec", "chart", "spec", "version"}, change.Trace)
+						assert.Equal(t, "0.10.1", change.OldVersion)
+						assert.Equal(t, "0.10.3", change.NewVersion)
+						assert.Equal(t, "0.10.1", change.OldValue)
+						assert.Equal(t, "0.10.3", change.NewValue)
+					}
 
-					assert.Equal(t, "kustomization.yaml", (*changes)[2].File)
-					assert.Equal(t, yamlTrace{"bases", 0}, (*changes)[2].Trace)
-					assert.Equal(t, "controller-v1.0.0", (*changes)[2].OldVersion)
-					assert.Equal(t, "controller-v1.0.10", (*changes)[2].NewVersion)
-					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.0", (*changes)[2].OldValue)
-					assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.10", (*changes)[2].NewValue)
+					if assert.NotNil(t, result[3].Error) {
+						assert.EqualError(t, result[3].Error, `helm-release.yaml:fail: annotation {"will":"fail2"} misses registry`)
+					}
+
+					if assert.NotNil(t, result[4].Change) {
+						change := result[4].Change
+						assert.Equal(t, "kustomization.yaml", change.File)
+						assert.Equal(t, yamlTrace{"bases", 0}, change.Trace)
+						assert.Equal(t, "controller-v1.0.0", change.OldVersion)
+						assert.Equal(t, "controller-v1.0.10", change.NewVersion)
+						assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.0", change.OldValue)
+						assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.10", change.NewValue)
+					}
 				}
 			}
 		}

@@ -62,39 +62,38 @@ func writeYaml(v interface{}) ([]byte, error) {
 	return bs.Bytes(), err
 }
 
-func visitYamlRecursion(trace yamlTrace, yamlNode *yaml.Node, fn func(trace yamlTrace, yamlNode *yaml.Node) error) error {
+func visitYamlRecursion(trace yamlTrace, yamlNode *yaml.Node, fn func(trace yamlTrace, yamlNode *yaml.Node) error) []error {
+	errors := []error{}
 	if yamlNode.Kind == yaml.MappingNode {
 		for i := 0; i < len(yamlNode.Content); i += 2 {
 			keyNode := yamlNode.Content[i]
 			valueNode := yamlNode.Content[i+1]
-			err := visitYamlRecursion(trace.Next(keyNode.Value), valueNode, fn)
-			if err != nil {
-				return err
-			}
+			errs := visitYamlRecursion(trace.Next(keyNode.Value), valueNode, fn)
+			errors = append(errors, errs...)
 		}
 	} else if yamlNode.Kind == yaml.SequenceNode {
 		for i, child := range yamlNode.Content {
-			err := visitYamlRecursion(trace.Next(i), child, fn)
-			if err != nil {
-				return err
+			errs := visitYamlRecursion(trace.Next(i), child, fn)
+			if len(errs) > 0 {
+				errors = append(errors, errs...)
 			}
 		}
 	} else if yamlNode.Kind == yaml.ScalarNode {
 		err := fn(trace, yamlNode)
 		if err != nil {
-			return err
+			errors = append(errors, err)
 		}
 	} else {
 		for _, child := range yamlNode.Content {
-			err := visitYamlRecursion(trace, child, fn)
-			if err != nil {
-				return err
+			errs := visitYamlRecursion(trace, child, fn)
+			if len(errs) > 0 {
+				errors = append(errors, errs...)
 			}
 		}
 	}
-	return nil
+	return errors
 }
 
-func VisitYaml(yamlNode *yaml.Node, fn func(trace yamlTrace, yamlNode *yaml.Node) error) error {
+func VisitYaml(yamlNode *yaml.Node, fn func(trace yamlTrace, yamlNode *yaml.Node) error) []error {
 	return visitYamlRecursion(yamlTrace{}, yamlNode, fn)
 }

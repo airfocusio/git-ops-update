@@ -4,6 +4,7 @@ metadata:
   name: nginx
   labels:
     app: nginx
+fail: fail # git-ops-update {"will":"fail1"}
 spec:
   selector:
     matchLabels:
