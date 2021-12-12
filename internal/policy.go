@@ -173,9 +173,33 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string, pref
 		return nil, err
 	}
 	if len(*allFilteredSortedVersions) > 0 {
-		return &(*allFilteredSortedVersions)[0], nil
+		nextVersion := (*allFilteredSortedVersions)[0]
+		if p.Compare(currentVersion, nextVersion, prefix, suffix) < 0 {
+			return &(*allFilteredSortedVersions)[0], nil
+		}
 	}
 	return &currentVersion, nil
+}
+
+func (p Policy) Compare(v1 string, v2 string, prefix string, suffix string) int {
+	p1, err1 := p.Parse(v1, prefix, suffix)
+	if err1 != nil {
+		return 0
+	}
+	p2, err2 := p.Parse(v2, prefix, suffix)
+	if err2 != nil {
+		return 0
+	}
+	if len(*p1) != len(*p2) {
+		return 0
+	}
+	for i := 0; i < len(*p1); i++ {
+		tmp := p.Extracts[i].Strategy.Compare((*p1)[i], (*p2)[i])
+		if tmp != 0 {
+			return tmp
+		}
+	}
+	return 0
 }
 
 func (str LexicographicExtractStrategy) IsValid(v string) bool {

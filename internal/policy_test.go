@@ -164,7 +164,7 @@ func TestPolicyFindNext(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FindNext("1", []string{"1", "2", "3"}, "", "")
 	if assert.NoError(t, err) {
-		assert.Equal(t, "3", *actual)
+		assert.Equal(t, "1", *actual)
 	}
 
 	p2 := Policy{
@@ -221,6 +221,21 @@ func TestPolicyFindNext(t *testing.T) {
 	actual, err = p3.FindNext("3.0.0", []string{"1.0.0", "1.1.0", "2.0.0", "2.0.0-pre"}, "", "")
 	if assert.NoError(t, err) {
 		assert.Equal(t, "3.0.0", *actual)
+	}
+
+	p4 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
+		Extracts: []Extract{
+			{
+				Value:    "<all>",
+				Strategy: SemverExtractStrategy{},
+			},
+		},
+	}
+
+	actual, err = p4.FindNext("0.10.4-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0-pre"}, "", "")
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.4-pre", *actual)
 	}
 }
 
