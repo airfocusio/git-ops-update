@@ -24,6 +24,8 @@ type Change struct {
 
 type Changes []Change
 
+const gitHubMaxPullRequestTitleLength = 256
+
 func (c Change) Identifier() string {
 	return c.File + "#" + c.Trace.ToString() + "#" + c.NewValue
 }
@@ -49,6 +51,18 @@ func (cs Changes) Branch(prefix string) string {
 
 func (c Change) Message() string {
 	return fmt.Sprintf("Update %s:%s from %s to %s", c.File, c.Trace.ToString(), c.OldValue, c.NewValue)
+}
+
+func (cs Changes) Title() string {
+	updates := []string{}
+	for _, change := range cs {
+		updates = append(updates, fmt.Sprintf("%s:%s", change.ResourceName, change.NewVersion))
+	}
+	result := fmt.Sprintf("Update %s", strings.Join(updates, ", "))
+	if len(result) > gitHubMaxPullRequestTitleLength {
+		return result[0:gitHubMaxPullRequestTitleLength]
+	}
+	return result
 }
 
 func (cs Changes) Message() string {

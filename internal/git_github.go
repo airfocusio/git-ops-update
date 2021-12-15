@@ -99,9 +99,9 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
-	pullTitle := "Update"
 	pullBase := string(baseBranch.Name())
 	pullHead := string(targetBranch)
+	pullTitle := changes.Title()
 	pullBody := changes.Message()
 	_, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
 		Title: &pullTitle,
