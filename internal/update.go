@@ -28,10 +28,10 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bo
 				changes := Changes{*result.Change}
 				if result.Change.Action == nil {
 					result.SkipMessage = "marked as disabled"
-				} else if result.Change.Action.AlreadyApplied(dir, changes) {
+				} else if (*result.Change.Action).AlreadyApplied(dir, changes) {
 					result.SkipMessage = "already applied"
 				} else {
-					err := result.Change.Action.Apply(dir, changes)
+					err := (*result.Change.Action).Apply(dir, changes)
 					if err != nil {
 						result.Error = fmt.Errorf("%s:%s: %w", result.Change.File, result.Change.Trace.ToString(), err)
 					}
@@ -143,7 +143,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					Trace:        trace,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
-					Action:       *annotation.Action,
+					Action:       annotation.Action,
 				}
 				result = append(result, UpdateVersionResult{Change: &change})
 			}

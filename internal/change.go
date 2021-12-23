@@ -19,7 +19,7 @@ type Change struct {
 	Trace        yamlTrace
 	OldValue     string
 	NewValue     string
-	Action       Action
+	Action       *Action
 }
 
 type Changes []Change
