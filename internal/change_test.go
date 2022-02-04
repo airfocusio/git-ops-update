@@ -34,11 +34,11 @@ func TestChangeIdentifier(t *testing.T) {
 }
 
 func TestChangesTitle(t *testing.T) {
-	assert.Equal(t, "Update my-resource:2.0.0", Changes{c1}.Title())
-	assert.Equal(t, "Update my-resource:2.0.0, my-resource2:4.0.0", Changes{c1, c2}.Title())
+	assert.Equal(t, "Update my-registry/my-resource:2.0.0", Changes{c1}.Title())
+	assert.Equal(t, "Update my-registry/my-resource:2.0.0, my-registry2/my-resource2:4.0.0", Changes{c1, c2}.Title())
 }
 
 func TestChangesBranch(t *testing.T) {
-	assert.Equal(t, "git-ops-update/b192fbd55a666b30", Changes{c1}.Branch("git-ops-update"))
-	assert.Equal(t, "git-ops-update/925d44a4f1703462", Changes{c1, c2}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0/b192fbd55a666b30", Changes{c1}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0-my-registry2-my-resource2-4.0.0/925d44a4f1703462", Changes{c1, c2}.Branch("git-ops-update"))
 }

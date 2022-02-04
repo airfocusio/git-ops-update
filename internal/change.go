@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -46,7 +47,24 @@ func (cs Changes) Hash() []byte {
 }
 
 func (cs Changes) Branch(prefix string) string {
-	return prefix + "/" + hex.EncodeToString(cs.Hash()[:8])
+	updates := []string{}
+	for _, change := range cs {
+		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
+	}
+
+	return fmt.Sprintf(
+		"%s/%s/%s",
+		cs.BranchFindPrefix(prefix),
+		capString(dashCased(strings.Join(updates, "-")), 128),
+		cs.BranchFindSuffix())
+}
+
+func (cs Changes) BranchFindPrefix(prefix string) string {
+	return prefix
+}
+
+func (cs Changes) BranchFindSuffix() string {
+	return capString(hex.EncodeToString(cs.Hash()), 16)
 }
 
 func (c Change) Message() string {
@@ -56,7 +74,7 @@ func (c Change) Message() string {
 func (cs Changes) Title() string {
 	updates := []string{}
 	for _, change := range cs {
-		updates = append(updates, fmt.Sprintf("%s:%s", change.ResourceName, change.NewVersion))
+		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
 	}
 	result := fmt.Sprintf("Update %s", strings.Join(updates, ", "))
 	if len(result) > gitHubMaxPullRequestTitleLength {
@@ -112,4 +130,20 @@ func (cs Changes) Push(dir string, fileHooks ...func(file string) error) error {
 		}
 	}
 	return nil
+}
+
+var dashCaseReplaceRegex = regexp.MustCompile("[^a-z0-9.]+")
+
+func dashCased(str string) string {
+	lower := strings.ToLower(str)
+	dashed := dashCaseReplaceRegex.ReplaceAllString(lower, "-")
+	trimmed := strings.Trim(dashed, "-")
+	return trimmed
+}
+
+func capString(str string, max int) string {
+	if len(str) > max {
+		return str[:max]
+	}
+	return str
 }
