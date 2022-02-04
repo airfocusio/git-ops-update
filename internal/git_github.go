@@ -140,9 +140,6 @@ func (p GitHubGitProvider) AlreadyRequested(dir string, changes Changes) bool {
 	targetBranchExists := false
 	for _, ref := range remoteRefs {
 		refName := ref.Name().String()
-		if !strings.HasPrefix(ref.Name().String(), "refs/pull/") {
-			fmt.Printf("%s <-> %s (%s # %s)\n", refName, changes.Branch(branchPrefix), targetBranchFindPrefix, targetBranchFindSuffix)
-		}
 		if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.HasSuffix(refName, targetBranchFindSuffix) {
 			targetBranchExists = true
 			break
