@@ -5,13 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/google/go-github/v40/github"
@@ -116,7 +112,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 
 	err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
 	if err != nil {
-		return fmt.Errorf("unable to checkout to bae branch: %w", err)
+		return fmt.Errorf("unable to checkout to base branch: %w", err)
 	}
 	return nil
 }
@@ -148,36 +144,6 @@ func (p GitHubGitProvider) AlreadyRequested(dir string, changes Changes) bool {
 		}
 	}
 	return targetBranchExists
-}
-
-func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, message string, author GitAuthor, callbacks ...func() error) (*plumbing.Hash, error) {
-	err := changes.Push(dir)
-	if err != nil {
-		return nil, err
-	}
-	err = runCallbacks(callbacks)
-	if err != nil {
-		return nil, err
-	}
-	excludes, err := gitignore.ReadPatterns(osfs.New(dir), []string{})
-	if err != nil {
-		return nil, err
-	}
-	worktree.Excludes = excludes
-	err = worktree.AddWithOptions(&git.AddOptions{
-		All: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	signature := object.Signature{Name: author.Name, Email: author.Email, When: time.Now()}
-	commit, err := worktree.Commit(message, &git.CommitOptions{Author: &signature})
-	if err != nil {
-		return nil, err
-	}
-
-	return &commit, nil
 }
 
 func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, error) {
