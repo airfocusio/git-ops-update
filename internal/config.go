@@ -38,16 +38,19 @@ type RawConfigRegistryGitHubTag struct {
 }
 
 type RawConfigPolicyExtractLexicographicStrategy struct {
+	Key   string `yaml:"key"`
 	Value string `yaml:"value"`
 	Pin   bool   `yaml:"pin"`
 }
 
 type RawConfigPolicyExtractNumericStrategy struct {
+	Key   string `yaml:"key"`
 	Value string `yaml:"value"`
 	Pin   bool   `yaml:"pin"`
 }
 
 type RawConfigPolicyExtractSemverStrategy struct {
+	Key              string `yaml:"key"`
 	Value            string `yaml:"value"`
 	PinMajor         bool   `yaml:"pinMajor"`
 	PinMinor         bool   `yaml:"pinMinor"`
@@ -208,7 +211,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				if err != nil {
 					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
-				extracts = append(extracts, Extract{Value: ep.Value, Strategy: LexicographicExtractStrategy{
+				extracts = append(extracts, Extract{Key: ep.Key, Value: ep.Value, Strategy: LexicographicExtractStrategy{
 					Pin: ep.Pin,
 				}})
 			} else if t == "numeric" {
@@ -217,7 +220,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				if err != nil {
 					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
-				extracts = append(extracts, Extract{Value: ep.Value, Strategy: NumericExtractStrategy{
+				extracts = append(extracts, Extract{Key: ep.Key, Value: ep.Value, Strategy: NumericExtractStrategy{
 					Pin: ep.Pin,
 				}})
 			} else if t == "semver" {
@@ -226,7 +229,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 				if err != nil {
 					return nil, fmt.Errorf("policy extract %s/%d is invalid: %w", pn, ei, err)
 				}
-				extracts = append(extracts, Extract{Value: ep.Value, Strategy: SemverExtractStrategy{
+				extracts = append(extracts, Extract{Key: ep.Key, Value: ep.Value, Strategy: SemverExtractStrategy{
 					PinMajor:         ep.PinMajor,
 					PinMinor:         ep.PinMinor,
 					PinPatch:         ep.PinPatch,

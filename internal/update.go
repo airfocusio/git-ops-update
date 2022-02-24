@@ -117,7 +117,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 			if err != nil {
 				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 			}
-			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix)
+			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix, annotation.Filter)
 			if err != nil {
 				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 			}
@@ -168,13 +168,14 @@ type annotation struct {
 	Format       *Format
 	ActionName   string `json:"action"`
 	Action       *Action
-	Prefix       string   `json:"prefix"`
-	Suffix       string   `json:"suffix"`
-	Exec         []string `json:"exec"`
+	Prefix       string                 `json:"prefix"`
+	Suffix       string                 `json:"suffix"`
+	Filter       map[string]interface{} `json:"filter"`
+	Exec         []string               `json:"exec"`
 }
 
 func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Config) (*annotation, error) {
-	regex := regexp.MustCompile(`git-ops-update\s*(\{.*?\})`)
+	regex := regexp.MustCompile(`git-ops-update\s*(\{.*)`)
 	annotationStrMatch := regex.FindStringSubmatch(annotationStrFull)
 	if annotationStrMatch == nil {
 		return nil, nil

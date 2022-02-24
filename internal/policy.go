@@ -17,6 +17,7 @@ type Policy struct {
 
 // Extract
 type Extract struct {
+	Key      string
 	Value    string
 	Strategy ExtractStrategy
 }
@@ -25,6 +26,7 @@ type ExtractStrategy interface {
 	IsValid(v string) bool
 	IsCompatible(v1 string, v2 string) bool
 	Compare(v1 string, v2 string) int
+	Segments(v string) map[string]string
 }
 
 type LexicographicExtractStrategy struct {
@@ -44,29 +46,31 @@ type SemverExtractStrategy struct {
 
 var extractPattern = regexp.MustCompile(`<([^>]+)>`)
 
-func (p Policy) Parse(version string, prefix string, suffix string) (*[]string, error) {
+func (p Policy) Parse(version string, prefix string, suffix string) (map[string]string, []string, error) {
 	unpackedVersion := version
 	if !strings.HasPrefix(unpackedVersion, prefix) {
-		return nil, nil
+		return nil, nil, nil
 	}
 	unpackedVersion = strings.TrimPrefix(unpackedVersion, prefix)
 	if !strings.HasSuffix(version, suffix) {
-		return nil, nil
+		return nil, nil, nil
 	}
 	unpackedVersion = strings.TrimSuffix(unpackedVersion, suffix)
 	segments := map[string]string{}
 	if p.Pattern != nil {
 		match := p.Pattern.FindStringSubmatch(unpackedVersion)
 		if match == nil {
-			return &[]string{}, fmt.Errorf("version %s does not match pattern %v with prefix \"%s\" and suffix \"%s\"", version, p.Pattern, prefix, suffix)
+			return map[string]string{}, []string{}, fmt.Errorf("version %s does not match pattern %v with prefix \"%s\" and suffix \"%s\"", version, p.Pattern, prefix, suffix)
 		}
 		names := p.Pattern.SubexpNames()
 		for i, s := range match {
-			segments[names[i]] = s
+			if names[i] != "" {
+				segments[names[i]] = s
+			}
 		}
 	}
 
-	result := []string{}
+	extracts := []string{}
 	for _, e := range p.Extracts {
 		value := unpackedVersion
 		if e.Value != "" {
@@ -75,11 +79,16 @@ func (p Policy) Parse(version string, prefix string, suffix string) (*[]string, 
 				value := segments[key]
 				return value
 			})
+			if e.Key != "" {
+				for k, v := range e.Strategy.Segments(value) {
+					segments[e.Key+"."+k] = v
+				}
+			}
 		}
-		result = append(result, value)
+		extracts = append(extracts, value)
 	}
 
-	return &result, nil
+	return segments, extracts, nil
 }
 
 type versionParsed struct {
@@ -119,8 +128,8 @@ func (l versionParsedList) Less(i, j int) bool {
 	return false
 }
 
-func (p Policy) FilterAndSort(currentVersion string, availableVersions []string, prefix string, suffix string) (*[]string, error) {
-	currentVersionParsed, err := p.Parse(currentVersion, prefix, suffix)
+func (p Policy) FilterAndSort(currentVersion string, availableVersions []string, prefix string, suffix string, filter map[string]interface{}) (*[]string, error) {
+	_, currentVersionParsed, err := p.Parse(currentVersion, prefix, suffix)
 	if err != nil {
 		return nil, err
 	}
@@ -130,12 +139,39 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 
 	temp1 := []versionParsed{}
 	for _, version := range availableVersions {
-		parsed, err := p.Parse(version, prefix, suffix)
+		segments, parsed, err := p.Parse(version, prefix, suffix)
 		if parsed != nil && err == nil {
-			temp1 = append(temp1, versionParsed{
-				Version: version,
-				Parsed:  *parsed,
-			})
+			matchesFilter := true
+			for k, v := range filter {
+				vString, ok := v.(string)
+				if ok {
+					if segments[k] != vString {
+						matchesFilter = false
+					}
+					continue
+				}
+				vStrings, ok := v.([]string)
+				if ok {
+					contains := false
+					for _, v2 := range vStrings {
+						if segments[k] == v2 {
+							contains = true
+							break
+						}
+					}
+					if !contains {
+						matchesFilter = false
+					}
+					continue
+				}
+				return nil, fmt.Errorf("filter must either be a string or a string list")
+			}
+			if matchesFilter {
+				temp1 = append(temp1, versionParsed{
+					Version: version,
+					Parsed:  parsed,
+				})
+			}
 		}
 	}
 	temp2 := versionParsedList{
@@ -148,13 +184,13 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 	for _, version := range temp2.Items {
 		isCompatible := true
 		for i, parsed := range version.Parsed {
-			if !temp2.Extracts[i].Strategy.IsValid((*currentVersionParsed)[i]) {
-				return nil, fmt.Errorf("%s has extraction %s which is invalid for selected strategy", currentVersion, (*currentVersionParsed)[i])
+			if !temp2.Extracts[i].Strategy.IsValid(currentVersionParsed[i]) {
+				return nil, fmt.Errorf("%s has extraction %s which is invalid for selected strategy", currentVersion, currentVersionParsed[i])
 			}
 			if !temp2.Extracts[i].Strategy.IsValid(parsed) {
 				isCompatible = false
 			}
-			if !temp2.Extracts[i].Strategy.IsCompatible((*currentVersionParsed)[i], parsed) {
+			if !temp2.Extracts[i].Strategy.IsCompatible(currentVersionParsed[i], parsed) {
 				isCompatible = false
 			}
 		}
@@ -166,9 +202,9 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 	return &result, nil
 }
 
-func (p Policy) FindNext(currentVersion string, availableVersions []string, prefix string, suffix string) (*string, error) {
+func (p Policy) FindNext(currentVersion string, availableVersions []string, prefix string, suffix string, filter map[string]interface{}) (*string, error) {
 	allVersions := append(availableVersions, currentVersion)
-	allFilteredSortedVersions, err := p.FilterAndSort(currentVersion, allVersions, prefix, suffix)
+	allFilteredSortedVersions, err := p.FilterAndSort(currentVersion, allVersions, prefix, suffix, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -182,19 +218,19 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string, pref
 }
 
 func (p Policy) Compare(v1 string, v2 string, prefix string, suffix string) int {
-	p1, err1 := p.Parse(v1, prefix, suffix)
+	_, p1, err1 := p.Parse(v1, prefix, suffix)
 	if err1 != nil {
 		return 0
 	}
-	p2, err2 := p.Parse(v2, prefix, suffix)
+	_, p2, err2 := p.Parse(v2, prefix, suffix)
 	if err2 != nil {
 		return 0
 	}
-	if len(*p1) != len(*p2) {
+	if len(p1) != len(p2) {
 		return 0
 	}
-	for i := 0; i < len(*p1); i++ {
-		tmp := p.Extracts[i].Strategy.Compare((*p1)[i], (*p2)[i])
+	for i := 0; i < len(p1); i++ {
+		tmp := p.Extracts[i].Strategy.Compare(p1[i], p2[i])
 		if tmp != 0 {
 			return tmp
 		}
@@ -221,6 +257,10 @@ func (str LexicographicExtractStrategy) Compare(v1 string, v2 string) int {
 
 func (str LexicographicExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	return !str.Pin || v1 == v2
+}
+
+func (str LexicographicExtractStrategy) Segments(v string) map[string]string {
+	return map[string]string{}
 }
 
 func (str NumericExtractStrategy) IsValid(v string) bool {
@@ -268,6 +308,10 @@ func (str NumericExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 	return !str.Pin || v1 == v2
 }
 
+func (str NumericExtractStrategy) Segments(v string) map[string]string {
+	return map[string]string{}
+}
+
 func (str SemverExtractStrategy) IsValid(v string) bool {
 	_, err := semver.Make(v)
 	return err == nil
@@ -304,4 +348,22 @@ func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 		return false
 	}
 	return true
+}
+
+func (str SemverExtractStrategy) Segments(v string) map[string]string {
+	vsv, err := semver.Make(v)
+	if err != nil {
+		return map[string]string{}
+	}
+	preStr := []string{}
+	for _, x := range vsv.Pre {
+		preStr = append(preStr, x.VersionStr)
+	}
+	return map[string]string{
+		"major": fmt.Sprintf("%d", vsv.Major),
+		"minor": fmt.Sprintf("%d", vsv.Minor),
+		"patch": fmt.Sprintf("%d", vsv.Patch),
+		"pre":   strings.Join(preStr, "."),
+		"build": strings.Join(vsv.Build, "."),
+	}
 }

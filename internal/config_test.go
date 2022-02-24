@@ -52,6 +52,7 @@ func TestLoadConfig(t *testing.T) {
 				Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
 				Extracts: []Extract{
 					{
+						Key:   "all",
 						Value: "<all>",
 						Strategy: LexicographicExtractStrategy{
 							Pin: true,

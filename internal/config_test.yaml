@@ -28,6 +28,7 @@ policies:
     pattern: '^(?P<all>.*)$'
     extracts:
     - type: lexicographic
+      key: all
       value: '<all>'
       pin: true
   numeric:
