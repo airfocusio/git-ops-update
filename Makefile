@@ -1,24 +1,21 @@
 .PHONY: *
 
-MAIN := .
-TEST := ./internal
-
 run:
-	go run $(MAIN) --dir=example --dry --ignore-errors --verbose
+	go run . --dir=example --dry --ignore-errors --verbose
 
 test:
-	go test -v $(TEST)
+	go test -v ./...
 
 test-watch:
-	watch -n1 go test -v $(TEST)
+	watch -n1 go test -v ./...
 
 test-cover:
-	go test -coverprofile=coverage.out $(TEST)
+	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out
 	go tool cover -html=coverage.out
 
 build:
-	goreleaser build --rm-dist --snapshot
+	goreleaser release --rm-dist --skip-publish --snapshot
 
 release:
 	goreleaser release --rm-dist
