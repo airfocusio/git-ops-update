@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:1.19.0-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}
+          image: nginx:1.19-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}

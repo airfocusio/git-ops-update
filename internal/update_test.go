@@ -43,9 +43,9 @@ func TestDetectUpdates(t *testing.T) {
 						change := result[0].Change
 						assert.Equal(t, "deployment.yaml", change.File)
 						assert.Equal(t, yamlTrace{"spec", "template", "spec", "containers", 0, "image"}, change.Trace)
-						assert.Equal(t, "1.19.0-alpine", change.OldVersion)
+						assert.Equal(t, "1.19-alpine", change.OldVersion)
 						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
-						assert.Equal(t, "nginx:1.19.0-alpine", change.OldValue)
+						assert.Equal(t, "nginx:1.19-alpine", change.OldValue)
 						assert.Equal(t, "nginx:1.19.1-alpine", change.NewValue)
 					}
 

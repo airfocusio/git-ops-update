@@ -392,17 +392,22 @@ func TestNumericSortStrategyIsCompatible(t *testing.T) {
 
 func TestSemverSortStrategyIsValid(t *testing.T) {
 	str := SemverExtractStrategy{}
+	strRelaxed := SemverExtractStrategy{Relaxed: true}
 
 	assert.Equal(t, true, str.IsValid("0.0.0"))
 	assert.Equal(t, true, str.IsValid("1.2.3"))
 	assert.Equal(t, true, str.IsValid("1.2.3-rc.1"))
 	assert.Equal(t, false, str.IsValid("v1.2.3"))
 	assert.Equal(t, false, str.IsValid("1.2"))
+	assert.Equal(t, true, strRelaxed.IsValid("1.2"))
+	assert.Equal(t, false, str.IsValid("1"))
+	assert.Equal(t, true, strRelaxed.IsValid("1"))
 	assert.Equal(t, false, str.IsValid(""))
 }
 
 func TestSemverSortStrategyCompare(t *testing.T) {
 	str := SemverExtractStrategy{}
+	strRelaxed := SemverExtractStrategy{Relaxed: true}
 
 	assert.Equal(t, 0, str.Compare("1.0.0", "1.0.0"))
 	assert.Equal(t, -1, str.Compare("1.0.0", "1.0.1"))
@@ -417,6 +422,10 @@ func TestSemverSortStrategyCompare(t *testing.T) {
 	assert.Equal(t, 0, str.Compare("1.0.0+2", "1.0.0+1"))
 	assert.Equal(t, -1, str.Compare("1.0.0-dev.2", "1.0.0-dev.10"))
 	assert.Equal(t, 1, str.Compare("1.0.0-dev.10", "1.0.0-dev.2"))
+
+	assert.Equal(t, 0, strRelaxed.Compare("1", "1.0"))
+	assert.Equal(t, 0, strRelaxed.Compare("1.0", "1.0.0"))
+	assert.Equal(t, 1, strRelaxed.Compare("1.1", "1.0.9"))
 }
 
 func TestSemverSortStrategyIsCompatible(t *testing.T) {

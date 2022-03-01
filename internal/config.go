@@ -56,6 +56,7 @@ type RawConfigPolicyExtractSemverStrategy struct {
 	PinMinor         bool   `yaml:"pinMinor"`
 	PinPatch         bool   `yaml:"pinPatch"`
 	AllowPrereleases bool   `yaml:"allowPrereleases"`
+	Relaxed          bool   `yaml:"relaxed"`
 }
 
 type RawConfigPolicy struct {
@@ -234,6 +235,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 					PinMinor:         ep.PinMinor,
 					PinPatch:         ep.PinPatch,
 					AllowPrereleases: ep.AllowPrereleases,
+					Relaxed:          ep.Relaxed,
 				}})
 			} else {
 				return nil, fmt.Errorf("policy %s/%d has invalid type %s", pn, ei, t)

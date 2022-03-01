@@ -38,6 +38,7 @@ type NumericExtractStrategy struct {
 }
 
 type SemverExtractStrategy struct {
+	Relaxed          bool
 	PinMajor         bool
 	PinMinor         bool
 	PinPatch         bool
@@ -313,11 +314,18 @@ func (str NumericExtractStrategy) Segments(v string) map[string]string {
 }
 
 func (str SemverExtractStrategy) IsValid(v string) bool {
+	if str.Relaxed {
+		v = str.fillMissingZeros(v)
+	}
 	_, err := semver.Make(v)
 	return err == nil
 }
 
 func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
+	if str.Relaxed {
+		v1 = str.fillMissingZeros(v1)
+		v2 = str.fillMissingZeros(v2)
+	}
 	if v1 == v2 {
 		return 0
 	}
@@ -330,6 +338,10 @@ func (str SemverExtractStrategy) Compare(v1 string, v2 string) int {
 }
 
 func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
+	if str.Relaxed {
+		v1 = str.fillMissingZeros(v1)
+		v2 = str.fillMissingZeros(v2)
+	}
 	v1sv, err1 := semver.Make(v1)
 	v2sv, err2 := semver.Make(v2)
 	if err1 != nil || err2 != nil {
@@ -351,6 +363,9 @@ func (str SemverExtractStrategy) IsCompatible(v1 string, v2 string) bool {
 }
 
 func (str SemverExtractStrategy) Segments(v string) map[string]string {
+	if str.Relaxed {
+		v = str.fillMissingZeros(v)
+	}
 	vsv, err := semver.Make(v)
 	if err != nil {
 		return map[string]string{}
@@ -366,4 +381,17 @@ func (str SemverExtractStrategy) Segments(v string) map[string]string {
 		"pre":   strings.Join(preStr, "."),
 		"build": strings.Join(vsv.Build, "."),
 	}
+}
+
+func (str SemverExtractStrategy) fillMissingZeros(v string) string {
+	parts := strings.SplitN(v, "-", 2)
+	firstPartParts := strings.Split(parts[0], ".")
+	switch len(firstPartParts) {
+	case 1:
+		firstPartParts = append(firstPartParts, "0", "0")
+	case 2:
+		firstPartParts = append(firstPartParts, "0")
+	}
+	parts[0] = strings.Join(firstPartParts, ".")
+	return strings.Join(parts, "-")
 }

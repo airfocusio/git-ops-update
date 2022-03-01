@@ -24,3 +24,4 @@ policies:
         value: '<version>'
         pinMajor: true
         pinMinor: true
+        relaxed: true
