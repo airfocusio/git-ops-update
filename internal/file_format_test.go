@@ -23,13 +23,24 @@ func TestYamlFileFormatExtractAnnotations(t *testing.T) {
 		{LineNum: 5, AnnotationRaw: "git-ops-update {\"other\":1}"},
 	})
 	test(strings.Split(`
-foo: |
+foo1: 1 # ignored
+foo2: |
   {
-    "embedded": "json" # ignores
+    "embedded": "json" # ignored
   }
-bar: value # working
+foo3: | # ignored
+  a
+  b
+foo4: > # ignored
+  a
+  b
+bar1: value # working 1
+bar2: 'value' # working 2
+bar3: "value" # working 3
 `, "\n"), []FileFormatAnnotation{
-		{LineNum: 6, AnnotationRaw: "working"},
+		{LineNum: 13, AnnotationRaw: "working 1"},
+		{LineNum: 14, AnnotationRaw: "working 2"},
+		{LineNum: 15, AnnotationRaw: "working 3"},
 	})
 }
 

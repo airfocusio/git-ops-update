@@ -53,7 +53,7 @@ func (f YamlFileFormat) ExtractAnnotations(lines []string) ([]FileFormatAnnotati
 		}
 
 		if err := visitYaml(documentNode, func(node *yaml.Node) error {
-			if node.LineComment != "" {
+			if node.Tag == "!!str" && (node.Style == 0 || node.Style == yaml.SingleQuotedStyle || node.Style == yaml.DoubleQuotedStyle) && node.LineComment != "" {
 				result = append(result, FileFormatAnnotation{
 					LineNum:       firstDocumentLine + node.Line,
 					AnnotationRaw: strings.TrimLeft(node.LineComment, "# "),
