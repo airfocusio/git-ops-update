@@ -3,12 +3,11 @@ package internal
 import (
 	utiljson "encoding/json"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 type UpdateVersionResult struct {
@@ -33,7 +32,7 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bo
 				} else {
 					err := (*result.Change.Action).Apply(dir, changes)
 					if err != nil {
-						result.Error = fmt.Errorf("%s:%s: %w", result.Change.File, result.Change.Trace.ToString(), err)
+						result.Error = fmt.Errorf("%s:%d: %w", result.Change.File, result.Change.Line, err)
 					}
 				}
 			} else {
@@ -66,25 +65,32 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 		}
 		LogDebug("Scanning file %s", fileRel)
 
-		fileDoc := &yaml.Node{}
-		err = fileReadYaml(file, fileDoc)
+		bytes, err := ioutil.ReadFile(file)
 		if err != nil {
 			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
 			continue
 		}
+		lines := strings.Split(string(bytes), "\n")
 
-		errs := VisitYaml(fileDoc, func(trace yamlTrace, yamlNode *yaml.Node) error {
-			lineComment := strings.TrimPrefix(yamlNode.LineComment, "#")
-			if lineComment == "" {
-				return nil
-			}
-
-			annotation, err := parseAnnotation(*yamlNode, lineComment, config)
+		errs := []error{}
+		fileFormat, err := GuessFileFormatFromExtension(file)
+		if err != nil {
+			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
+			continue
+		}
+		for i, line := range lines {
+			lineComment, err := fileFormat.ExtractLineComment(line)
 			if err != nil {
-				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				continue
+			}
+			annotation, err := parseAnnotation(lineComment, config)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				continue
 			}
 			if annotation == nil {
-				return nil
+				continue
 			}
 
 			var availableVersions []string
@@ -93,7 +99,8 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				LogDebug("Fetching new versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
 				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
-					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					continue
 				}
 				availableVersions = versions
 				nextCache := cache.UpdateResource(CacheResource{
@@ -105,34 +112,35 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				cache = &nextCache
 				err = cacheProvider.Save(*cache)
 				if err != nil {
-					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					continue
 				}
 			} else {
 				LogDebug("Using cached versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
 				availableVersions = cachedResource.Versions
 			}
 
-			currentValue := yamlNode.Value
+			currentValue, err := fileFormat.ReadValue(line)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				continue
+			}
 			currentVersion, err := (*annotation.Format).ExtractVersion(currentValue)
 			if err != nil {
-				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				continue
 			}
 			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix, annotation.Filter)
 			if err != nil {
-				return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				continue
 			}
 
 			if *currentVersion != *nextVersion {
-				traceStr := ""
-				for _, e := range trace {
-					s, ok := e.(string)
-					if ok {
-						traceStr = traceStr + "." + s
-					}
-				}
 				nextValue, err := (*annotation.Format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
-					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					continue
 				}
 				change := Change{
 					RegistryName: annotation.RegistryName,
@@ -140,16 +148,15 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					OldVersion:   *currentVersion,
 					NewVersion:   *nextVersion,
 					File:         fileRel,
-					Trace:        trace,
+					FileFormat:   fileFormat,
+					Line:         i + 1,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
 					Action:       annotation.Action,
 				}
 				result = append(result, UpdateVersionResult{Change: &change})
 			}
-
-			return nil
-		})
+		}
 		for _, err := range errs {
 			result = append(result, UpdateVersionResult{Error: err})
 		}
@@ -174,7 +181,7 @@ type annotation struct {
 	Exec         []string               `json:"exec"`
 }
 
-func parseAnnotation(valueNode yaml.Node, annotationStrFull string, config Config) (*annotation, error) {
+func parseAnnotation(annotationStrFull string, config Config) (*annotation, error) {
 	regex := regexp.MustCompile(`git-ops-update\s*(\{.*)`)
 	annotationStrMatch := regex.FindStringSubmatch(annotationStrFull)
 	if annotationStrMatch == nil {

@@ -17,3 +17,24 @@ spec:
       containers:
         - name: nginx
           image: nginx:1.19-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx2
+  labels:
+    app: nginx2
+spec:
+  selector:
+    matchLabels:
+      app: nginx2
+  template:
+    metadata:
+      labels:
+        app: nginx2
+    spec:
+      containers:
+        - image: nginx:1.19-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}
+          name: nginx

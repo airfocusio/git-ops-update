@@ -4,11 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Change struct {
@@ -17,7 +17,8 @@ type Change struct {
 	OldVersion   string
 	NewVersion   string
 	File         string
-	Trace        yamlTrace
+	FileFormat   FileFormat
+	Line         int
 	OldValue     string
 	NewValue     string
 	Action       *Action
@@ -28,7 +29,7 @@ type Changes []Change
 const gitHubMaxPullRequestTitleLength = 256
 
 func (c Change) Identifier() string {
-	return c.File + "#" + c.Trace.ToString() + "#" + c.NewValue
+	return c.File + "#" + strconv.Itoa(c.Line) + "#" + c.NewValue
 }
 
 func (c Change) Hash() []byte {
@@ -68,7 +69,7 @@ func (cs Changes) BranchFindSuffix() string {
 }
 
 func (c Change) Message() string {
-	return fmt.Sprintf("Update %s:%s from %s to %s", c.File, c.Trace.ToString(), c.OldValue, c.NewValue)
+	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.Line, c.OldValue, c.NewValue)
 }
 
 func (cs Changes) Title() string {
@@ -96,20 +97,18 @@ func (cs Changes) Message() string {
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 	file := filepath.Join(dir, c.File)
-	doc := yaml.Node{}
-	err := fileReadYaml(file, &doc)
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(bytes), "\n")
+
+	lines[c.Line-1], err = c.FileFormat.WriteValue(lines[c.Line-1], c.NewValue)
 	if err != nil {
 		return err
 	}
 
-	VisitYaml(&doc, func(trace yamlTrace, node *yaml.Node) error {
-		if trace.Equal(c.Trace) {
-			node.Value = c.NewValue
-		}
-		return nil
-	})
-
-	err = fileWriteYaml(file, &doc)
+	err = ioutil.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o664)
 	if err != nil {
 		return err
 	}
