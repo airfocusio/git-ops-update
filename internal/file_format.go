@@ -9,9 +9,14 @@ import (
 )
 
 type FileFormat interface {
-	ExtractLineComment(line string) (string, error)
-	ReadValue(line string) (string, error)
-	WriteValue(line string, value string) (string, error)
+	ExtractAnnotations(all []string) ([]FileFormatAnnotation, error)
+	ReadValue(lines []string, lineNum int) (string, error)
+	WriteValue(lines []string, lineNum int, value string) error
+}
+
+type FileFormatAnnotation struct {
+	LineNum       int
+	AnnotationRaw string
 }
 
 func GuessFileFormatFromExtension(file string) (FileFormat, error) {
@@ -27,23 +32,44 @@ func GuessFileFormatFromExtension(file string) (FileFormat, error) {
 
 type YamlFileFormat struct{}
 
-func (f YamlFileFormat) ExtractLineComment(line string) (string, error) {
-	_, rest := separateLeadingWhitspaces(line)
-	node := &yaml.Node{}
-	if err := yaml.Unmarshal([]byte(rest), node); err != nil {
-		return "", err
+var _ FileFormat = (*YamlFileFormat)(nil)
+
+func (f YamlFileFormat) ExtractAnnotations(lines []string) ([]FileFormatAnnotation, error) {
+	documentsLines := [][]string{{}}
+	for i := 0; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "---") {
+			documentsLines = append(documentsLines, []string{})
+		} else {
+			documentsLines[len(documentsLines)-1] = append(documentsLines[len(documentsLines)-1], lines[i])
+		}
 	}
-	value := ""
-	if err := visitYaml(node, func(node *yaml.Node) error {
-		value = node.LineComment
-		return nil
-	}); err != nil {
-		return "", err
+
+	result := []FileFormatAnnotation{}
+	firstDocumentLine := 0
+	for _, documentLines := range documentsLines {
+		documentNode := &yaml.Node{}
+		if err := yaml.Unmarshal([]byte(strings.Join(documentLines, "\n")), documentNode); err != nil {
+			return result, err
+		}
+
+		if err := visitYaml(documentNode, func(node *yaml.Node) error {
+			if node.LineComment != "" {
+				result = append(result, FileFormatAnnotation{
+					LineNum:       firstDocumentLine + node.Line,
+					AnnotationRaw: strings.TrimLeft(node.LineComment, "# "),
+				})
+			}
+			return nil
+		}); err != nil {
+			return result, err
+		}
+		firstDocumentLine = firstDocumentLine + len(documentLines) + 1
 	}
-	return strings.TrimLeft(value, " #"), nil
+	return result, nil
 }
 
-func (f YamlFileFormat) ReadValue(line string) (string, error) {
+func (f YamlFileFormat) ReadValue(lines []string, lineNum int) (string, error) {
+	line := lines[lineNum-1]
 	_, rest := separateLeadingWhitspaces(line)
 	node := &yaml.Node{}
 	if err := yaml.Unmarshal([]byte(rest), node); err != nil {
@@ -59,26 +85,26 @@ func (f YamlFileFormat) ReadValue(line string) (string, error) {
 	return value, nil
 }
 
-func (f YamlFileFormat) WriteValue(line string, value string) (string, error) {
+func (f YamlFileFormat) WriteValue(lines []string, lineNum int, value string) error {
+	line := lines[lineNum-1]
 	lws, rest := separateLeadingWhitspaces(line)
 	node := &yaml.Node{}
 	if err := yaml.Unmarshal([]byte(rest), node); err != nil {
-		return "", err
+		return err
 	}
 	if err := visitYaml(node, func(node *yaml.Node) error {
 		node.Value = value
 		return nil
 	}); err != nil {
-		return "", err
+		return err
 	}
 	output, err := yaml.Marshal(node)
 	if err != nil {
-		return line, err
+		return err
 	}
-	return lws + strings.TrimSuffix(string(output), "\n"), nil
+	lines[lineNum-1] = lws + strings.TrimSuffix(string(output), "\n")
+	return nil
 }
-
-var _ FileFormat = (*YamlFileFormat)(nil)
 
 func separateLeadingWhitspaces(str string) (string, string) {
 	for i := 0; i < len(str); i++ {

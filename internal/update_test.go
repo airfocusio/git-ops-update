@@ -42,7 +42,7 @@ func TestDetectUpdates(t *testing.T) {
 					if assert.NotNil(t, result[0].Change) {
 						change := result[0].Change
 						assert.Equal(t, "deployment.yaml", change.File)
-						assert.Equal(t, 19, change.Line)
+						assert.Equal(t, 19, change.LineNum)
 						assert.Equal(t, "1.19-alpine", change.OldVersion)
 						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
 						assert.Equal(t, "nginx:1.19-alpine", change.OldValue)
@@ -52,7 +52,7 @@ func TestDetectUpdates(t *testing.T) {
 					if assert.NotNil(t, result[1].Change) {
 						change := result[1].Change
 						assert.Equal(t, "deployment.yaml", change.File)
-						assert.Equal(t, 39, change.Line)
+						assert.Equal(t, 39, change.LineNum)
 						assert.Equal(t, "1.19-alpine", change.OldVersion)
 						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
 						assert.Equal(t, "nginx:1.19-alpine", change.OldValue)
@@ -66,7 +66,7 @@ func TestDetectUpdates(t *testing.T) {
 					if assert.NotNil(t, result[3].Change) {
 						change := result[3].Change
 						assert.Equal(t, "helm-release.yaml", change.File)
-						assert.Equal(t, 13, change.Line)
+						assert.Equal(t, 13, change.LineNum)
 						assert.Equal(t, "0.10.1", change.OldVersion)
 						assert.Equal(t, "0.10.3", change.NewVersion)
 						assert.Equal(t, "0.10.1", change.OldValue)
@@ -80,7 +80,7 @@ func TestDetectUpdates(t *testing.T) {
 					if assert.NotNil(t, result[5].Change) {
 						change := result[5].Change
 						assert.Equal(t, "kustomization.yaml", change.File)
-						assert.Equal(t, 3, change.Line)
+						assert.Equal(t, 3, change.LineNum)
 						assert.Equal(t, "controller-v1.0.0", change.OldVersion)
 						assert.Equal(t, "controller-v1.0.10", change.NewVersion)
 						assert.Equal(t, "github.com/kubernetes/ingress-nginx/deploy/static/provider/kind?ref=controller-v1.0.0", change.OldValue)

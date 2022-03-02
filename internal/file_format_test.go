@@ -1,31 +1,43 @@
 package internal
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestYamlFileFormatExtractLineComment(t *testing.T) {
+func TestYamlFileFormatExtractAnnotations(t *testing.T) {
 	f := YamlFileFormat{}
-	test := func(input string, expected string) {
-		output, err := f.ExtractLineComment(input)
+	test := func(input []string, expected []FileFormatAnnotation) {
+		output, err := f.ExtractAnnotations(input)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, output)
 	}
-	test("", "")
-	test("#", "")
-	test("# foobar", "")
-	test("key: \"value\" # foobar", "foobar")
-	test("  key: \"value\" # foobar", "foobar")
-	test("  - key: \"value\" # foobar", "foobar")
-	test("    - key: \"value\" # foobar", "foobar")
+
+	test(strings.Split("", "\n"), []FileFormatAnnotation{})
+	test(strings.Split("key: value", "\n"), []FileFormatAnnotation{})
+	test(strings.Split("key: value\n\n---\n\nkey2: value2", "\n"), []FileFormatAnnotation{})
+	test(strings.Split("key: value # git-ops-update {}\n\n---\n\nkey2: value2 # git-ops-update {\"other\":1}", "\n"), []FileFormatAnnotation{
+		{LineNum: 1, AnnotationRaw: "git-ops-update {}"},
+		{LineNum: 5, AnnotationRaw: "git-ops-update {\"other\":1}"},
+	})
+	test(strings.Split(`
+foo: |
+  {
+    "embedded": "json" # ignores
+  }
+bar: value # working
+`, "\n"), []FileFormatAnnotation{
+		{LineNum: 6, AnnotationRaw: "working"},
+	})
 }
 
 func TestYamlFileFormatReadValue(t *testing.T) {
 	f := YamlFileFormat{}
 	test := func(input string, expected string) {
-		output, err := f.ReadValue(input)
+		lines := strings.Split(input, "\n")
+		output, err := f.ReadValue(lines, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, expected, output)
 	}
@@ -42,8 +54,10 @@ func TestYamlFileFormatReadValue(t *testing.T) {
 func TestYamlFileFormatWriteValue(t *testing.T) {
 	f := YamlFileFormat{}
 	test := func(input string, value string, expected string) {
-		output, err := f.WriteValue(input, value)
+		lines := strings.Split(input, "\n")
+		err := f.WriteValue(lines, 1, value)
 		assert.NoError(t, err)
+		output := strings.Join(lines, "\n")
 		assert.Equal(t, expected, output)
 	}
 	test("key: \"23\"", "new", "key: \"new\"")

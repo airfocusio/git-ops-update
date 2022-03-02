@@ -14,7 +14,7 @@ var c1 = Change{
 	OldValue:     "my-image:1.0.0",
 	NewValue:     "my-image:2.0.0",
 	File:         "folder/file.yaml",
-	Line:         3,
+	LineNum:      3,
 }
 
 var c2 = Change{
@@ -25,7 +25,7 @@ var c2 = Change{
 	OldValue:     "my-image2:3.0.0",
 	NewValue:     "my-image2:4.0.0",
 	File:         "folder/file2.yaml",
-	Line:         10,
+	LineNum:      10,
 }
 
 func TestChangeIdentifier(t *testing.T) {

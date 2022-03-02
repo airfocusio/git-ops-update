@@ -18,7 +18,7 @@ type Change struct {
 	NewVersion   string
 	File         string
 	FileFormat   FileFormat
-	Line         int
+	LineNum      int
 	OldValue     string
 	NewValue     string
 	Action       *Action
@@ -29,7 +29,7 @@ type Changes []Change
 const gitHubMaxPullRequestTitleLength = 256
 
 func (c Change) Identifier() string {
-	return c.File + "#" + strconv.Itoa(c.Line) + "#" + c.NewValue
+	return c.File + "#" + strconv.Itoa(c.LineNum) + "#" + c.NewValue
 }
 
 func (c Change) Hash() []byte {
@@ -69,7 +69,7 @@ func (cs Changes) BranchFindSuffix() string {
 }
 
 func (c Change) Message() string {
-	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.Line, c.OldValue, c.NewValue)
+	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.LineNum, c.OldValue, c.NewValue)
 }
 
 func (cs Changes) Title() string {
@@ -103,7 +103,7 @@ func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 	}
 	lines := strings.Split(string(bytes), "\n")
 
-	lines[c.Line-1], err = c.FileFormat.WriteValue(lines[c.Line-1], c.NewValue)
+	err = c.FileFormat.WriteValue(lines, c.LineNum, c.NewValue)
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bo
 				} else {
 					err := (*result.Change.Action).Apply(dir, changes)
 					if err != nil {
-						result.Error = fmt.Errorf("%s:%d: %w", result.Change.File, result.Change.Line, err)
+						result.Error = fmt.Errorf("%s:%d: %w", result.Change.File, result.Change.LineNum, err)
 					}
 				}
 			} else {
@@ -78,15 +78,16 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
 			continue
 		}
-		for i, line := range lines {
-			lineComment, err := fileFormat.ExtractLineComment(line)
+		fileAnnotations, err := fileFormat.ExtractAnnotations(lines)
+		if err != nil {
+			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
+			continue
+		}
+
+		for _, fileAnnotation := range fileAnnotations {
+			annotation, err := parseAnnotation(fileAnnotation.AnnotationRaw, config)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
-				continue
-			}
-			annotation, err := parseAnnotation(lineComment, config)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 				continue
 			}
 			if annotation == nil {
@@ -99,7 +100,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				LogDebug("Fetching new versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
 				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
-					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
 				availableVersions = versions
@@ -112,7 +113,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				cache = &nextCache
 				err = cacheProvider.Save(*cache)
 				if err != nil {
-					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
 			} else {
@@ -120,26 +121,26 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				availableVersions = cachedResource.Versions
 			}
 
-			currentValue, err := fileFormat.ReadValue(line)
+			currentValue, err := fileFormat.ReadValue(lines, fileAnnotation.LineNum)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 				continue
 			}
 			currentVersion, err := (*annotation.Format).ExtractVersion(currentValue)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 				continue
 			}
 			nextVersion, err := annotation.Policy.FindNext(*currentVersion, availableVersions, annotation.Prefix, annotation.Suffix, annotation.Filter)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+				errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 				continue
 			}
 
 			if *currentVersion != *nextVersion {
 				nextValue, err := (*annotation.Format).ReplaceVersion(currentValue, *nextVersion)
 				if err != nil {
-					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, i+1, err))
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
 				change := Change{
@@ -149,7 +150,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					NewVersion:   *nextVersion,
 					File:         fileRel,
 					FileFormat:   fileFormat,
-					Line:         i + 1,
+					LineNum:      fileAnnotation.LineNum,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
 					Action:       annotation.Action,

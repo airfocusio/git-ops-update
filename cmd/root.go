@@ -53,11 +53,11 @@ func newRootCmd(version FullVersion) *rootCmd {
 					errorCount += 1
 					internal.LogError("%v", r.Error)
 				} else if r.SkipMessage == "dry run" {
-					internal.LogInfo("%s:%d from %s to %s", r.Change.File, r.Change.Line, r.Change.OldVersion, r.Change.NewVersion)
+					internal.LogInfo("%s:%d from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
 				} else if r.SkipMessage != "" {
-					internal.LogDebug("%s:%d the version could have been updated from %s to %s but as skipped (%s)", r.Change.File, r.Change.Line, r.Change.OldVersion, r.Change.NewVersion, r.SkipMessage)
+					internal.LogDebug("%s:%d the version could have been updated from %s to %s but as skipped (%s)", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion, r.SkipMessage)
 				} else {
-					internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.Line, r.Change.OldVersion, r.Change.NewVersion)
+					internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
 				}
 			}
 
