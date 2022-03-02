@@ -129,7 +129,7 @@ func (l versionParsedList) Less(i, j int) bool {
 	return false
 }
 
-func (p Policy) FilterAndSort(currentVersion string, availableVersions []string, prefix string, suffix string, filter map[string]interface{}) (*[]string, error) {
+func (p Policy) FilterAndSort(currentVersion string, availableVersions []string, prefix string, suffix string, filter map[string]interface{}) ([]string, error) {
 	_, currentVersionParsed, err := p.Parse(currentVersion, prefix, suffix)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 		}
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (p Policy) FindNext(currentVersion string, availableVersions []string, prefix string, suffix string, filter map[string]interface{}) (*string, error) {
@@ -209,10 +209,10 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string, pref
 	if err != nil {
 		return nil, err
 	}
-	if len(*allFilteredSortedVersions) > 0 {
-		nextVersion := (*allFilteredSortedVersions)[0]
+	if len(allFilteredSortedVersions) > 0 {
+		nextVersion := (allFilteredSortedVersions)[0]
 		if p.Compare(currentVersion, nextVersion, prefix, suffix) < 0 {
-			return &(*allFilteredSortedVersions)[0], nil
+			return &allFilteredSortedVersions[0], nil
 		}
 	}
 	return &currentVersion, nil

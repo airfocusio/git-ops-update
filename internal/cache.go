@@ -72,7 +72,7 @@ func (p FileCacheProvider) Save(cache Cache) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(p.File, *cacheBytesOut, 0644)
+	err = ioutil.WriteFile(p.File, cacheBytesOut, 0644)
 	if err != nil {
 		return err
 	}
@@ -88,10 +88,10 @@ func loadCache(bytes []byte) (*Cache, error) {
 	return cache, nil
 }
 
-func saveCache(cache Cache) (*[]byte, error) {
+func saveCache(cache Cache) ([]byte, error) {
 	bytes, err := writeYaml(cache)
 	if err != nil {
 		return nil, err
 	}
-	return &bytes, nil
+	return bytes, nil
 }

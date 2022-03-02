@@ -11,5 +11,5 @@ type HttpBasicCredentials struct {
 
 type Registry interface {
 	GetInterval() time.Duration
-	FetchVersions(resource string) (*[]string, error)
+	FetchVersions(resource string) ([]string, error)
 }

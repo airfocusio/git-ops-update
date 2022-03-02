@@ -14,6 +14,8 @@ type HelmRegistry struct {
 	Credentials HttpBasicCredentials
 }
 
+var _ Registry = (*HelmRegistry)(nil)
+
 type helmRegistryIndex struct {
 	ApiVersion string `yaml:"apiVersion"`
 	Entries    map[string][]struct {
@@ -28,7 +30,7 @@ func (r HelmRegistry) GetInterval() time.Duration {
 	return r.Interval
 }
 
-func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
+func (r HelmRegistry) FetchVersions(chart string) ([]string, error) {
 	url := strings.TrimSuffix(r.Url, "/") + "/index.yaml"
 	username := r.Credentials.Username
 	password := r.Credentials.Password
@@ -65,5 +67,5 @@ func (r HelmRegistry) FetchVersions(chart string) (*[]string, error) {
 		result = append(result, version.Version)
 	}
 
-	return &result, nil
+	return result, nil
 }

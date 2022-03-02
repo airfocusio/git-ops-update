@@ -137,7 +137,7 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	p1 := Policy{}
 	actual, err := p1.FilterAndSort("1", []string{"1", "2", "3"}, "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, []string{"3", "2", "1"}, *actual)
+		assert.Equal(t, []string{"3", "2", "1"}, actual)
 	}
 
 	p2 := Policy{
@@ -155,11 +155,11 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	}
 	actual, err = p2.FilterAndSort("1.0", strings.Split("18.04 18.10 19.04 19.10 20.04 20.10 21.04 21.10 22.04", " "), "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("22.04 21.10 21.04 20.10 20.04 19.10 19.04 18.10 18.04", " "), *actual)
+		assert.Equal(t, strings.Split("22.04 21.10 21.04 20.10 20.04 19.10 19.04 18.10 18.04", " "), actual)
 	}
 	actual, err = p2.FilterAndSort("v1.0-ubuntu", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("v22.04-ubuntu v21.10-ubuntu v21.04-ubuntu v20.10-ubuntu v20.04-ubuntu v19.10-ubuntu v19.04-ubuntu v18.10-ubuntu v18.04-ubuntu", " "), *actual)
+		assert.Equal(t, strings.Split("v22.04-ubuntu v21.10-ubuntu v21.04-ubuntu v20.10-ubuntu v20.04-ubuntu v19.10-ubuntu v19.04-ubuntu v18.10-ubuntu v18.04-ubuntu", " "), actual)
 	}
 	_, err = p2.FilterAndSort("v1.0", strings.Split("17.10 v18.04-ubuntu v18.10-ubuntu v19.04-ubuntu v19.10-ubuntu v20.04-ubuntu v20.10-ubuntu v21.04-ubuntu v21.10-ubuntu v22.04-ubuntu", " "), "v", "-ubuntu", nil)
 	assert.Error(t, err)
@@ -167,15 +167,15 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	assert.Error(t, err)
 	actual, err = p2.FilterAndSort("1.0", strings.Split("1.2 1.10 2.1 2.10", " "), "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), actual)
 	}
 	actual, err = p2.FilterAndSort("1.0", strings.Split("1.10 1.2 2.10 2.1", " "), "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), *actual)
+		assert.Equal(t, strings.Split("2.10 2.1 1.10 1.2", " "), actual)
 	}
 	actual, err = p2.FilterAndSort("1.0", strings.Split("2.10-a 1.10 1.2 2.10 2.1 1.10-b 1.10-c 1.10-a", " "), "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.10-a 2.10 2.1 1.10-c 1.10-b 1.10-a 1.10 1.2", " "), *actual)
+		assert.Equal(t, strings.Split("2.10-a 2.10 2.1 1.10-c 1.10-b 1.10-a 1.10 1.2", " "), actual)
 	}
 
 	p3 := Policy{
@@ -193,7 +193,7 @@ func TestPolicyFilterAndSort(t *testing.T) {
 	}
 	actual, err = p3.FilterAndSort("1.2", strings.Split("1.0 2 1 1.1 1.2 1.3 2.0", " "), "", "", nil)
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.0 2 1.3 1.2 1.1 1.0 1", " "), *actual)
+		assert.Equal(t, strings.Split("2.0 2 1.3 1.2 1.1 1.0 1", " "), actual)
 	}
 
 	p4 := Policy{
@@ -213,21 +213,21 @@ func TestPolicyFilterAndSort(t *testing.T) {
 		"prefix": "a",
 	})
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("a-2.0-b a-2.0-a", " "), *actual)
+		assert.Equal(t, strings.Split("a-2.0-b a-2.0-a", " "), actual)
 	}
 	actual, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
 		"prefix": "a",
 		"suffix": "a",
 	})
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("a-2.0-a", " "), *actual)
+		assert.Equal(t, strings.Split("a-2.0-a", " "), actual)
 	}
 	actual, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
 		"prefix": []string{"a", ""},
 		"suffix": []string{"b", ""},
 	})
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("a-2.0-b 2.0", " "), *actual)
+		assert.Equal(t, strings.Split("a-2.0-b 2.0", " "), actual)
 	}
 	_, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
 		"suffix": 23,
@@ -249,13 +249,13 @@ func TestPolicyFilterAndSort(t *testing.T) {
 		"key.build": "b",
 	})
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.0.0+b", " "), *actual)
+		assert.Equal(t, strings.Split("2.0.0+b", " "), actual)
 	}
 	actual, err = p5.FilterAndSort("1.0.0", strings.Split("2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
 		"key.build": []string{"a", "c"},
 	})
 	if assert.NoError(t, err) {
-		assert.Equal(t, strings.Split("2.0.0+c 2.0.0+a", " "), *actual)
+		assert.Equal(t, strings.Split("2.0.0+c 2.0.0+a", " "), actual)
 	}
 }
 

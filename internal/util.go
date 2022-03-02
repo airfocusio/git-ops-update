@@ -7,7 +7,7 @@ import (
 	"regexp"
 )
 
-func FileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*[]string, error) {
+func FileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) ([]string, error) {
 	defaultExclude := regexp.MustCompile(`\/\.git-ops-update(\.cache)?\.yaml$`)
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -39,7 +39,7 @@ func FileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) (*
 		}
 		return nil
 	})
-	return &files, err
+	return files, err
 }
 
 func FileResolvePath(dir string, file string) string {

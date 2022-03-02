@@ -15,6 +15,8 @@ type GitHubTagRegistry struct {
 	Credentials HttpBasicCredentials
 }
 
+var _ Registry = (*GitHubTagRegistry)(nil)
+
 type gitHubTagRegistryRef struct {
 	Ref    string `json:"ref"`
 	NodeId string `json:"node_id"`
@@ -25,7 +27,7 @@ func (r GitHubTagRegistry) GetInterval() time.Duration {
 	return r.Interval
 }
 
-func (r GitHubTagRegistry) FetchVersions(repository string) (*[]string, error) {
+func (r GitHubTagRegistry) FetchVersions(repository string) ([]string, error) {
 	LogDebug("Fetching versions from github-tag registry %s", repository)
 	baseUrl := "https://api.github.com"
 	if r.Url != "" {
@@ -67,5 +69,5 @@ func (r GitHubTagRegistry) FetchVersions(repository string) (*[]string, error) {
 		}
 	}
 
-	return &result, nil
+	return result, nil
 }

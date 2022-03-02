@@ -58,7 +58,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 	}
 
 	result := []UpdateVersionResult{}
-	for _, file := range *files {
+	for _, file := range files {
 		fileRel, err := filepath.Rel(dir, file)
 		if err != nil {
 			result = append(result, UpdateVersionResult{Error: err})
@@ -95,7 +95,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 				if err != nil {
 					return fmt.Errorf("%s:%s: %w", fileRel, trace.ToString(), err)
 				}
-				availableVersions = *versions
+				availableVersions = versions
 				nextCache := cache.UpdateResource(CacheResource{
 					RegistryName: annotation.RegistryName,
 					ResourceName: annotation.ResourceName,

@@ -17,11 +17,13 @@ type DockerRegistry struct {
 	Credentials HttpBasicCredentials
 }
 
+var _ Registry = (*DockerRegistry)(nil)
+
 func (r DockerRegistry) GetInterval() time.Duration {
 	return r.Interval
 }
 
-func (r DockerRegistry) FetchVersions(repository string) (*[]string, error) {
+func (r DockerRegistry) FetchVersions(repository string) ([]string, error) {
 	type tagsPage struct {
 		Name string   `json:"name"`
 		Tags []string `json:"tags"`
@@ -62,7 +64,7 @@ func (r DockerRegistry) FetchVersions(repository string) (*[]string, error) {
 		}
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func dockerWrapTransport(transport http.RoundTripper, url, username, password string) http.RoundTripper {
