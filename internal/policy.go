@@ -374,13 +374,20 @@ func (str SemverExtractStrategy) Segments(v string) map[string]string {
 	for _, x := range vsv.Pre {
 		preStr = append(preStr, x.VersionStr)
 	}
-	return map[string]string{
+	result := map[string]string{
 		"major": fmt.Sprintf("%d", vsv.Major),
 		"minor": fmt.Sprintf("%d", vsv.Minor),
 		"patch": fmt.Sprintf("%d", vsv.Patch),
 		"pre":   strings.Join(preStr, "."),
 		"build": strings.Join(vsv.Build, "."),
 	}
+	for i, x := range vsv.Pre {
+		result["pre."+strconv.Itoa(i)] = x.VersionStr
+	}
+	for i, x := range vsv.Build {
+		result["build."+strconv.Itoa(i)] = x
+	}
+	return result
 }
 
 func (str SemverExtractStrategy) fillMissingZeros(v string) string {

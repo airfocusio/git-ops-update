@@ -120,12 +120,16 @@ func TestPolicyParse(t *testing.T) {
 		assert.Equal(
 			t,
 			map[string]string{
-				"version":    "1.2.3-a.b+c.d",
-				"some.major": "1",
-				"some.minor": "2",
-				"some.patch": "3",
-				"some.pre":   "a.b",
-				"some.build": "c.d",
+				"version":      "1.2.3-a.b+c.d",
+				"some.major":   "1",
+				"some.minor":   "2",
+				"some.patch":   "3",
+				"some.pre":     "a.b",
+				"some.pre.0":   "a",
+				"some.pre.1":   "b",
+				"some.build":   "c.d",
+				"some.build.0": "c",
+				"some.build.1": "d",
 			},
 			actual1,
 		)
@@ -461,18 +465,24 @@ func TestSemverSegments(t *testing.T) {
 	}, SemverExtractStrategy{}.Segments("1.2.3"))
 
 	assert.Equal(t, map[string]string{
-		"major": "1",
-		"minor": "2",
-		"patch": "3",
-		"pre":   "a.b",
-		"build": "c.d",
+		"major":   "1",
+		"minor":   "2",
+		"patch":   "3",
+		"pre":     "a.b",
+		"pre.0":   "a",
+		"pre.1":   "b",
+		"build":   "c.d",
+		"build.0": "c",
+		"build.1": "d",
 	}, SemverExtractStrategy{}.Segments("1.2.3-a.b+c.d"))
 
 	assert.Equal(t, map[string]string{
-		"major": "1",
-		"minor": "2",
-		"patch": "3",
-		"pre":   "",
-		"build": "c.d",
+		"major":   "1",
+		"minor":   "2",
+		"patch":   "3",
+		"pre":     "",
+		"build":   "c.d",
+		"build.0": "c",
+		"build.1": "d",
 	}, SemverExtractStrategy{}.Segments("1.2.3+c.d"))
 }
