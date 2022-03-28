@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"runtime/debug"
 
 	"github.com/airfocusio/git-ops-update/internal"
@@ -12,12 +13,13 @@ import (
 )
 
 type rootCmd struct {
-	cmd          *cobra.Command
-	directory    string
-	dry          bool
-	verbose      bool
-	ignoreErrors bool
-	noColor      bool
+	cmd       *cobra.Command
+	directory string
+	dry       bool
+	verbose   bool
+	noColor   bool
+	includes  []string
+	excludes  []string
 }
 
 func newRootCmd(version FullVersion) *rootCmd {
@@ -27,6 +29,7 @@ func newRootCmd(version FullVersion) *rootCmd {
 		Use:          "git-ops-update",
 		Short:        "An updater for docker images and helm charts in your infrastructure-as-code repository",
 		SilenceUsage: true,
+		Args:         cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			internal.SetLogVerbosity(cmdCfg.verbose)
 			if cmdCfg.noColor {
@@ -42,6 +45,30 @@ func newRootCmd(version FullVersion) *rootCmd {
 			if err != nil {
 				internal.LogError("Unable to load configuration: %v", err)
 				os.Exit(1)
+			}
+			if len(cmdCfg.includes) > 0 {
+				includes := []regexp.Regexp{}
+				for _, i := range cmdCfg.includes {
+					regex, err := regexp.Compile(i)
+					if err != nil {
+						internal.LogError("Unable to parse includes: %v", err)
+						os.Exit(1)
+					}
+					includes = append(includes, *regex)
+				}
+				config.Files.Includes = includes
+			}
+			if len(cmdCfg.excludes) > 0 {
+				excludes := []regexp.Regexp{}
+				for _, e := range cmdCfg.excludes {
+					regex, err := regexp.Compile(e)
+					if err != nil {
+						internal.LogError("Unable to parse excludes: %v", err)
+						os.Exit(1)
+					}
+					excludes = append(excludes, *regex)
+				}
+				config.Files.Excludes = excludes
 			}
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
@@ -61,7 +88,7 @@ func newRootCmd(version FullVersion) *rootCmd {
 				}
 			}
 
-			if errorCount > 0 && !cmdCfg.ignoreErrors {
+			if errorCount > 0 {
 				os.Exit(1)
 			}
 		},
@@ -70,8 +97,9 @@ func newRootCmd(version FullVersion) *rootCmd {
 	cmd.PersistentFlags().StringVar(&cmdCfg.directory, "dir", ".", "dir")
 	cmd.Flags().BoolVar(&cmdCfg.dry, "dry", false, "dry")
 	cmd.Flags().BoolVar(&cmdCfg.verbose, "verbose", false, "verbose")
-	cmd.Flags().BoolVar(&cmdCfg.ignoreErrors, "ignore-errors", false, "ignore-errors")
 	cmd.Flags().BoolVar(&cmdCfg.noColor, "no-color", false, "no-color")
+	cmd.Flags().StringArrayVar(&cmdCfg.includes, "includes", []string{}, "includes")
+	cmd.Flags().StringArrayVar(&cmdCfg.excludes, "excludes", []string{}, "excludes")
 	cmdCfg.cmd = cmd
 	return cmdCfg
 }

@@ -1,7 +1,7 @@
 .PHONY: *
 
 run:
-	go run . --dir=example --dry --ignore-errors --verbose
+	go run . --dir=example --dry --verbose
 
 test:
 	go test -v ./...
