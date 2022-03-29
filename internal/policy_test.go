@@ -227,14 +227,18 @@ func TestPolicyFilterAndSort(t *testing.T) {
 		assert.Equal(t, strings.Split("a-2.0-a", " "), actual)
 	}
 	actual, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
-		"prefix": []string{"a", ""},
-		"suffix": []string{"b", ""},
+		"prefix": []interface{}{"a", ""},
+		"suffix": []interface{}{"b", ""},
 	})
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("a-2.0-b 2.0", " "), actual)
 	}
 	_, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
 		"suffix": 23,
+	})
+	assert.EqualError(t, err, "filter must either be a string or a string list")
+	_, err = p4.FilterAndSort("1.0", strings.Split("2.0 a-2.0-a a-2.0-b b-2.0-a b-2.0-b", " "), "", "", map[string]interface{}{
+		"suffix": []interface{}{23},
 	})
 	assert.EqualError(t, err, "filter must either be a string or a string list")
 
@@ -256,7 +260,7 @@ func TestPolicyFilterAndSort(t *testing.T) {
 		assert.Equal(t, strings.Split("2.0.0+b", " "), actual)
 	}
 	actual, err = p5.FilterAndSort("1.0.0", strings.Split("2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
-		"key.build": []string{"a", "c"},
+		"key.build": []interface{}{"a", "c"},
 	})
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("2.0.0+c 2.0.0+a", " "), actual)

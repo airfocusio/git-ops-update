@@ -151,10 +151,17 @@ func (p Policy) FilterAndSort(currentVersion string, availableVersions []string,
 					}
 					continue
 				}
-				vStrings, ok := v.([]string)
+				vArray, ok := v.([]interface{})
+				if ok {
+					for _, v2 := range vArray {
+						if _, ok2 := v2.(string); !ok2 {
+							ok = false
+						}
+					}
+				}
 				if ok {
 					contains := false
-					for _, v2 := range vStrings {
+					for _, v2 := range vArray {
 						if segments[k] == v2 {
 							contains = true
 							break
