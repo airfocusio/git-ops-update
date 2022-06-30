@@ -70,6 +70,12 @@ type RawConfigGitGitHub struct {
 	AccessToken string `yaml:"accessToken"`
 }
 
+type RawConfigGitGitLab struct {
+	URL         string `yaml:"url"`
+	AccessToken string `yaml:"accessToken"`
+	AssigneeIDs []int  `yaml:"assigneeIDs"`
+}
+
 type RawConfigGitAuthor struct {
 	Name  string `yaml:"name"`
 	Email string `yaml:"email"`
@@ -78,6 +84,7 @@ type RawConfigGitAuthor struct {
 type RawConfigGit struct {
 	Author RawConfigGitAuthor  `yaml:"author"`
 	GitHub *RawConfigGitGitHub `yaml:"gitHub"`
+	GitLab *RawConfigGitGitLab `yaml:"gitLab"`
 }
 
 type RawConfig struct {
@@ -266,6 +273,13 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 		git.Provider = GitHubGitProvider{
 			Author:      gitAuthor,
 			AccessToken: config.Git.GitHub.AccessToken,
+		}
+	} else if config.Git.GitLab != nil {
+		git.Provider = GitLabGitProvider{
+			Author:      gitAuthor,
+			URL:         config.Git.GitLab.URL,
+			AccessToken: config.Git.GitLab.AccessToken,
+			AssigneeIDs: config.Git.GitLab.AssigneeIDs,
 		}
 	} else {
 		git.Provider = LocalGitProvider{

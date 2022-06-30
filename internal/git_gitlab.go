@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,16 +9,17 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
-	"github.com/google/go-github/v40/github"
-	"golang.org/x/oauth2"
+	"github.com/xanzy/go-gitlab"
 )
 
-type GitHubGitProvider struct {
+type GitLabGitProvider struct {
 	Author      GitAuthor
+	URL         string
 	AccessToken string
+	AssigneeIDs []int
 }
 
-func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitLabGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -45,7 +45,7 @@ func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func()
 	return nil
 }
 
-func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -86,25 +86,35 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to push changes: %w", err)
 	}
 
-	ownerName, repoName, err := extractGitHubOwnerRepoFromRemote(*remote)
+	projectId, err := extractGitLabProjectIdFromRemote(p.URL, *remote)
 	if err != nil {
-		return fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
+		return fmt.Errorf("unable to extract gitlab project id from remote origin: %w", err)
 	}
-	LogDebug("Creating pull request for branch %s to github repository %s/%s", targetBranch.Short(), *ownerName, *repoName)
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-	pullBase := string(baseBranch.Name())
-	pullHead := string(targetBranch)
+	LogDebug("Creating pull request for branch %s to gitlab project %s", targetBranch.Short(), *projectId)
+	client, err := gitlab.NewOAuthClient(
+		p.AccessToken,
+		gitlab.WithBaseURL(p.URL))
+	if err != nil {
+		return fmt.Errorf("failed to connect to gitlab: %w", err)
+	}
+	pullBase := string(baseBranch.Name().Short())
+	pullHead := changes.Branch(branchPrefix)
 	pullTitle := changes.Title()
 	pullBody := changes.Message()
-	_, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
-		Title: &pullTitle,
-		Base:  &pullBase,
-		Head:  &pullHead,
-		Body:  &pullBody,
+	removeSourceBranch := true
+	_, res, err := client.MergeRequests.CreateMergeRequest(*projectId, &gitlab.CreateMergeRequestOptions{
+		Title:              &pullTitle,
+		SourceBranch:       &pullHead,
+		TargetBranch:       &pullBase,
+		Description:        &pullBody,
+		RemoveSourceBranch: &removeSourceBranch,
+		AssigneeIDs:        &p.AssigneeIDs,
 	})
+	if err != nil {
+		return fmt.Errorf("unable to create gitlab merge request: %w", err)
+	}
+	defer res.Body.Close()
+
 	if err != nil {
 		return fmt.Errorf("unable to create github pull request: %w", err)
 	}
@@ -117,7 +127,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	return nil
 }
 
-func (p GitHubGitProvider) AlreadyRequested(dir string, changes Changes) bool {
+func (p GitLabGitProvider) AlreadyRequested(dir string, changes Changes) bool {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return false
@@ -148,20 +158,19 @@ func (p GitHubGitProvider) AlreadyRequested(dir string, changes Changes) bool {
 	return targetBranchExists
 }
 
-func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, error) {
-	httpRegex := regexp.MustCompile(`^https://github.com/(?P<owner>[^/]+)/(?P<repo>.*)$`)
-	sshRegex := regexp.MustCompile(`^git@github.com:(?P<owner>[^/]+)/(?P<repo>.*)$`)
+func extractGitLabProjectIdFromRemote(baseURL string, remote git.Remote) (*string, error) {
+	urlRegex := regexp.MustCompile(`^(?:(?:ssh|https?)\:\/\/)(?:[^@\/]+@)?[^\/]+\/(?P<projectid>.+).git\/?$`)
+	scpRegex := regexp.MustCompile(`^(?:[^@\/]+@)?[^:]+:(?P<projectid>.+).git\/?$`)
 	for _, url := range remote.Config().URLs {
-		httpMatch := httpRegex.FindStringSubmatch(url)
-		if httpMatch != nil {
-			repoName := strings.TrimSuffix(httpMatch[2], ".git")
-			return &httpMatch[1], &repoName, nil
+		urlMatch := urlRegex.FindStringSubmatch(url)
+		if urlMatch != nil {
+			return &urlMatch[1], nil
 		}
-		sshMatch := sshRegex.FindStringSubmatch(url)
-		if sshMatch != nil {
-			repoName := strings.TrimSuffix(sshMatch[2], ".git")
-			return &sshMatch[1], &repoName, nil
+		scpMatch := scpRegex.FindStringSubmatch(url)
+		if scpMatch != nil {
+			return &scpMatch[1], nil
 		}
 	}
-	return nil, nil, fmt.Errorf("none of the git remote %s urls %v could be recognized as a github repository", remote.Config().Name, remote.Config().URLs)
+
+	return nil, fmt.Errorf("none of the git remote %s urls %v could be recognized as a gitlab project", remote.Config().Name, remote.Config().URLs)
 }
