@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -16,6 +17,7 @@ type Change struct {
 	ResourceName string
 	OldVersion   string
 	NewVersion   string
+	Metadata     map[string]string
 	File         string
 	FileFormat   FileFormat
 	LineNum      int
@@ -86,11 +88,16 @@ func (cs Changes) Title() string {
 
 func (cs Changes) Message() string {
 	lines := []string{}
-	if len(cs) > 1 {
-		lines = append(lines, "Update", "")
-	}
 	for _, c := range cs {
-		lines = append(lines, c.Message())
+		lines = append(lines, "* "+c.Message())
+		metadataKeys := make([]string, 0)
+		for k, _ := range c.Metadata {
+			metadataKeys = append(metadataKeys, k)
+		}
+		sort.Strings(metadataKeys)
+		for _, k := range metadataKeys {
+			lines = append(lines, "    * "+k+": "+c.Metadata[k])
+		}
 	}
 	return strings.Join(lines, "\n")
 }

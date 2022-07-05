@@ -143,9 +143,15 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
+				metadata, err := (*annotation.Registry).RetrieveMetadata(annotation.ResourceName, *nextVersion)
+				if err != nil {
+					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
+					continue
+				}
 				change := Change{
 					RegistryName: annotation.RegistryName,
 					ResourceName: annotation.ResourceName,
+					Metadata:     metadata,
 					OldVersion:   *currentVersion,
 					NewVersion:   *nextVersion,
 					File:         fileRel,
