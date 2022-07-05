@@ -96,7 +96,13 @@ func (cs Changes) Message() string {
 		}
 		sort.Strings(metadataKeys)
 		for _, k := range metadataKeys {
-			lines = append(lines, "    * "+k+": "+c.Metadata[k])
+			value := c.Metadata[k]
+			valueLines := strings.Split(value, "\n")
+			for i := 1; i < len(valueLines); i++ {
+				valueLines[i] = "        " + valueLines[i]
+			}
+			indentedValue := strings.Join(valueLines, "\n")
+			lines = append(lines, "    * "+k+": "+indentedValue)
 		}
 	}
 	return strings.Join(lines, "\n")
