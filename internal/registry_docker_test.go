@@ -28,7 +28,7 @@ func TestDockerRetrieveMetadata(t *testing.T) {
 	}
 	output1, err := reg1.RetrieveMetadata("library/nginx", "1.23.0")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"Label maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}, output1)
+	assert.Equal(t, map[string]string{"maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}, output1)
 
 	reg2 := DockerRegistry{
 		Url: "https://quay.io",

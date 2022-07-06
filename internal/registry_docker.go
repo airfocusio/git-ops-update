@@ -180,7 +180,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 		}
 
 		for k, v := range config.Config.Labels {
-			result["Label "+k] = v
+			result[k] = v
 		}
 	}
 

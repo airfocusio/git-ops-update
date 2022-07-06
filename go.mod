@@ -23,7 +23,9 @@ require (
 require (
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-billy/v5 v5.3.1
+	github.com/iancoleman/strcase v0.2.0
 	github.com/xanzy/go-gitlab v0.68.0
+	golang.org/x/text v0.3.7
 )
 
 require (

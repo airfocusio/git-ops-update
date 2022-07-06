@@ -10,6 +10,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/iancoleman/strcase"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Change struct {
@@ -102,7 +106,8 @@ func (cs Changes) Message() string {
 				valueLines[i] = "        " + valueLines[i]
 			}
 			indentedValue := strings.Join(valueLines, "\n")
-			lines = append(lines, "    * "+k+": "+indentedValue)
+			niceKey := cases.Title(language.English).String(strcase.ToDelimited(k, ' '))
+			lines = append(lines, "    * "+niceKey+": "+indentedValue)
 		}
 	}
 	return strings.Join(lines, "\n")
