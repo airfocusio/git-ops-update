@@ -29,7 +29,7 @@ func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func()
 		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author, callbacks...)
+	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+changes.Message(), p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -72,7 +72,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to create target branch: %w", err)
 	}
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Message(), p.Author, callbacks...)
+	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+changes.Message(), p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}

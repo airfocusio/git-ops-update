@@ -9,6 +9,7 @@ import (
 var c1 = Change{
 	RegistryName: "my-registry",
 	ResourceName: "my-resource",
+	Metadata:     map[string]string{"someNumber": "1", "anotherNumber": "2"},
 	OldVersion:   "1.0.0",
 	NewVersion:   "2.0.0",
 	OldValue:     "my-image:1.0.0",
@@ -28,6 +29,18 @@ var c2 = Change{
 	LineNum:      10,
 }
 
+var c3 = Change{
+	RegistryName: "my-registry3",
+	ResourceName: "my-resource3",
+	Metadata:     map[string]string{"Message": "Hello\n\nWorld"},
+	OldVersion:   "5.0.0",
+	NewVersion:   "6.0.0",
+	OldValue:     "my-image3:5.0.0",
+	NewValue:     "my-image3:6.0.0",
+	File:         "folder/file3.yaml",
+	LineNum:      16,
+}
+
 func TestChangeIdentifier(t *testing.T) {
 	assert.Equal(t, "folder/file.yaml#3#my-image:2.0.0", c1.Identifier())
 	assert.Equal(t, "folder/file2.yaml#10#my-image2:4.0.0", c2.Identifier())
@@ -36,6 +49,13 @@ func TestChangeIdentifier(t *testing.T) {
 func TestChangesTitle(t *testing.T) {
 	assert.Equal(t, "Update my-registry/my-resource:2.0.0", Changes{c1}.Title())
 	assert.Equal(t, "Update my-registry/my-resource:2.0.0, my-registry2/my-resource2:4.0.0", Changes{c1, c2}.Title())
+}
+
+func TestChangesMessage(t *testing.T) {
+	assert.Equal(t, "* Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\n    * Another Number: 2\n    * Some Number: 1", Changes{c1}.Message())
+	assert.Equal(t, "* Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\n    * Another Number: 2\n    * Some Number: 1\n* Update folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0", Changes{c1, c2}.Message())
+
+	assert.Equal(t, "* Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0\n    * Message: Hello\n        \n        World", Changes{c3}.Message())
 }
 
 func TestChangesBranch(t *testing.T) {
