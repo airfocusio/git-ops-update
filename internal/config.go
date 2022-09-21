@@ -3,8 +3,10 @@ package internal
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/airfocusio/go-expandenv"
 	"gopkg.in/yaml.v3"
 )
@@ -82,9 +84,10 @@ type RawConfigGitAuthor struct {
 }
 
 type RawConfigGit struct {
-	Author RawConfigGitAuthor  `yaml:"author"`
-	GitHub *RawConfigGitGitHub `yaml:"gitHub"`
-	GitLab *RawConfigGitGitLab `yaml:"gitLab"`
+	Author  RawConfigGitAuthor  `yaml:"author"`
+	SignKey string              `yaml:"signKey"`
+	GitHub  *RawConfigGitGitHub `yaml:"gitHub"`
+	GitLab  *RawConfigGitGitLab `yaml:"gitLab"`
 }
 
 type RawConfig struct {
@@ -265,25 +268,41 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 	}
 
 	git := Git{}
-	gitAuthor := GitAuthor{
-		Name:  config.Git.Author.Name,
-		Email: config.Git.Author.Email,
+	authorSignKey := (*openpgp.Entity)(nil)
+	if config.Git.SignKey != "" {
+		reader := strings.NewReader(config.Git.SignKey)
+		keyRing, err := openpgp.ReadArmoredKeyRing(reader)
+		if err != nil {
+			return nil, err
+		}
+		decryptionKeys := keyRing.DecryptionKeys()
+		if len(keyRing.DecryptionKeys()) != 1 {
+			return nil, fmt.Errorf("expected exactly one secret key")
+		}
+		authorSignKey = decryptionKeys[0].Entity
 	}
+
+	author := GitAuthor{
+		Name:    config.Git.Author.Name,
+		Email:   config.Git.Author.Email,
+		SignKey: authorSignKey,
+	}
+
 	if config.Git.GitHub != nil {
 		git.Provider = GitHubGitProvider{
-			Author:      gitAuthor,
+			Author:      author,
 			AccessToken: config.Git.GitHub.AccessToken,
 		}
 	} else if config.Git.GitLab != nil {
 		git.Provider = GitLabGitProvider{
-			Author:      gitAuthor,
+			Author:      author,
 			URL:         config.Git.GitLab.URL,
 			AccessToken: config.Git.GitLab.AccessToken,
 			AssigneeIDs: config.Git.GitLab.AssigneeIDs,
 		}
 	} else {
 		git.Provider = LocalGitProvider{
-			Author: gitAuthor,
+			Author: author,
 		}
 	}
 
