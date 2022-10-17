@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -10,7 +9,7 @@ import (
 )
 
 func TestFileCacheProvider(t *testing.T) {
-	file, err := ioutil.TempFile(os.TempDir(), "cache")
+	file, err := os.CreateTemp(os.TempDir(), "cache")
 	if err != nil {
 		t.Error(err)
 		return
@@ -26,7 +25,7 @@ func TestFileCacheProvider(t *testing.T) {
       - "21.10"
     timestamp: 2006-01-02T15:04:05Z
 `
-	err = ioutil.WriteFile(file.Name(), []byte(yaml), 0644)
+	err = os.WriteFile(file.Name(), []byte(yaml), 0644)
 	if err != nil {
 		t.Error(err)
 		return
@@ -57,7 +56,7 @@ func TestFileCacheProvider(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	yaml2, err := ioutil.ReadFile(file.Name())
+	yaml2, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Error(err)
 		return

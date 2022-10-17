@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestApplyChangesAsCommit(t *testing.T) {
-	dir, err := ioutil.TempDir(os.TempDir(), "git-ops-update-")
+	dir, err := os.MkdirTemp(os.TempDir(), "git-ops-update-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 	file := path.Join(dir, "file")

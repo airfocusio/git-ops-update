@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -56,7 +56,7 @@ type FileCacheProvider struct {
 }
 
 func (p FileCacheProvider) Load() (*Cache, error) {
-	cacheRaw, err := ioutil.ReadFile(p.File)
+	cacheRaw, err := os.ReadFile(p.File)
 	if err != nil {
 		return &Cache{}, nil
 	}
@@ -72,7 +72,7 @@ func (p FileCacheProvider) Save(cache Cache) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(p.File, cacheBytesOut, 0644)
+	err = os.WriteFile(p.File, cacheBytesOut, 0644)
 	if err != nil {
 		return err
 	}

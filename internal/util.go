@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -50,7 +49,7 @@ func FileResolvePath(dir string, file string) string {
 }
 
 func fileReadYaml(file string, v interface{}) error {
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -66,7 +65,7 @@ func fileWriteYaml(file string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(file, bytes, 0644)
+	err = os.WriteFile(file, bytes, 0644)
 	if err != nil {
 		return err
 	}
