@@ -104,7 +104,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -117,14 +117,14 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 
 	manifests := []manifestJson{}
 
-	if resp.Header.Get("content-type") == "application/vnd.docker.distribution.manifest.v2+json" {
+	if resp.Header.Get("content-type") == "application/vnd.docker.distribution.manifest.v2+json" || resp.Header.Get("content-type") == "application/vnd.oci.image.manifest.v1+json" {
 		var manifest manifestJson
 		err = json.Unmarshal(respBody, &manifest)
 		if err != nil {
 			return nil, err
 		}
 		manifests = append(manifests, manifest)
-	} else if resp.Header.Get("content-type") == "application/vnd.docker.distribution.manifest.list.v2+json" {
+	} else if resp.Header.Get("content-type") == "application/vnd.docker.distribution.manifest.list.v2+json" || resp.Header.Get("content-type") == "application/vnd.oci.image.index.v1+json" {
 		var manifestList manifestListJson
 		err = json.Unmarshal(respBody, &manifestList)
 		if err != nil {
@@ -135,7 +135,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 			if err != nil {
 				return nil, err
 			}
-			req2.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+			req2.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json")
 			resp2, err := client.Do(req2)
 			if err != nil {
 				return nil, err
@@ -178,7 +178,6 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 		if err != nil {
 			return nil, err
 		}
-
 		for k, v := range config.Config.Labels {
 			result[k] = v
 		}
