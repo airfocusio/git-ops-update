@@ -3,7 +3,7 @@ package internal
 import (
 	utiljson "encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -65,7 +65,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 		}
 		LogDebug("Scanning file %s", fileRel)
 
-		bytes, err := ioutil.ReadFile(file)
+		bytes, err := os.ReadFile(file)
 		if err != nil {
 			result = append(result, UpdateVersionResult{Error: fmt.Errorf("%s: %w", fileRel, err)})
 			continue

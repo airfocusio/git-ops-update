@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -95,7 +95,7 @@ func (cs Changes) Message() string {
 	for _, c := range cs {
 		lines = append(lines, "* "+c.Message())
 		metadataKeys := make([]string, 0)
-		for k, _ := range c.Metadata {
+		for k := range c.Metadata {
 			metadataKeys = append(metadataKeys, k)
 		}
 		sort.Strings(metadataKeys)
@@ -115,7 +115,7 @@ func (cs Changes) Message() string {
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 	file := filepath.Join(dir, c.File)
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o664)
+	err = os.WriteFile(file, []byte(strings.Join(lines, "\n")), 0o664)
 	if err != nil {
 		return err
 	}

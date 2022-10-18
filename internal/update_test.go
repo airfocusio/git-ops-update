@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -9,7 +9,7 @@ import (
 )
 
 func TestDetectUpdates(t *testing.T) {
-	bytes, err := ioutil.ReadFile("../example/.git-ops-update.yaml")
+	bytes, err := os.ReadFile("../example/.git-ops-update.yaml")
 	if assert.NoError(t, err) {
 		cache := Cache{
 			Resources: []CacheResource{

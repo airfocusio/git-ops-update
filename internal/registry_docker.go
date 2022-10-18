@@ -3,7 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -41,7 +41,7 @@ func (r DockerRegistry) FetchVersions(repository string) ([]string, error) {
 		}
 		defer resp.Body.Close()
 
-		respBody, err := ioutil.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +110,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 		return nil, err
 	}
 	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 				return nil, err
 			}
 			defer resp2.Body.Close()
-			resp2Body, err := ioutil.ReadAll(resp2.Body)
+			resp2Body, err := io.ReadAll(resp2.Body)
 			if err != nil {
 				return nil, err
 			}
@@ -169,7 +169,7 @@ func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map
 			return nil, err
 		}
 		defer resp3.Body.Close()
-		resp3Body, err := ioutil.ReadAll(resp3.Body)
+		resp3Body, err := io.ReadAll(resp3.Body)
 		if err != nil {
 			return nil, err
 		}

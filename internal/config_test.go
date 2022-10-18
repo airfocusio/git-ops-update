@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	bytes, err := ioutil.ReadFile("config_test.yaml")
+	bytes, err := os.ReadFile("config_test.yaml")
 	assert.NoError(t, err)
 
 	c1, err := LoadConfig(bytes)
