@@ -37,3 +37,43 @@ func TestDockerRetrieveMetadata(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]string{}, output2)
 }
+
+func TestDockerRetrieveDockerV2ManifestMetadata(t *testing.T) {
+	reg := DockerRegistry{
+		Url: "https://ghcr.io",
+	}
+	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-v0.0.1")
+	assert.NoError(t, err)
+	assert.Contains(t, output, "foo")
+	assert.Equal(t, "bar", output["foo"])
+}
+
+func TestDockerRetrieveDockerV2ManifestListMetadata(t *testing.T) {
+	reg := DockerRegistry{
+		Url: "https://ghcr.io",
+	}
+	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-list-v0.0.1")
+	assert.NoError(t, err)
+	assert.Contains(t, output, "foo")
+	assert.Equal(t, "bar", output["foo"])
+}
+
+func TestDockerRetrieveOciV1ManifestMetadata(t *testing.T) {
+	reg := DockerRegistry{
+		Url: "https://ghcr.io",
+	}
+	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-manifest-v0.0.1")
+	assert.NoError(t, err)
+	assert.Contains(t, output, "foo")
+	assert.Equal(t, "bar", output["foo"])
+}
+
+func TestDockerRetrieveOciV1ImageIndexMetadata(t *testing.T) {
+	reg := DockerRegistry{
+		Url: "https://ghcr.io",
+	}
+	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-image-index-v0.0.1")
+	assert.NoError(t, err)
+	assert.Contains(t, output, "foo")
+	assert.Equal(t, "bar", output["foo"])
+}
