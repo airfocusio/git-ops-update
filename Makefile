@@ -1,8 +1,5 @@
 .PHONY: *
 
-run:
-	go run . --dir=example --dry --verbose
-
 test:
 	go test -v ./...
 
@@ -23,6 +20,14 @@ release:
 
 generate-test-images: REPOSITORY=ghcr.io/airfocusio/git-ops-update-test
 generate-test-images:
+	# test
+	echo "FROM scratch\nLABEL version=0.3.0\nLABEL commit=https://github.com/airfocusio/git-ops-update/commit/e3e58c3e98d80ea2596e8cd81462d2542a74fd21" | podman build -f - --format=docker --timestamp=0 --no-cache --tag $(REPOSITORY):test-v0.3.0
+	echo "FROM scratch\nLABEL version=0.4.0\nLABEL commit=https://github.com/airfocusio/git-ops-update/commit/a6859d7b28871a0a536b833e6d52493c42fb6d47" | podman build -f - --format=docker --timestamp=0 --no-cache --tag $(REPOSITORY):test-v0.4.0
+	podman push $(REPOSITORY):test-v0.3.0
+	podman push $(REPOSITORY):test-v0.4.0
+	podman image rm $(REPOSITORY):test-v0.3.0
+	podman image rm $(REPOSITORY):test-v0.4.0
+
 	# docker v2 manifest
 	echo "FROM scratch\nLABEL version=0.0.1\nLABEL foo=bar" | podman build -f - --format=docker --timestamp=0 --no-cache --tag $(REPOSITORY):docker-v2-manifest-v0.0.1
 	echo "FROM scratch\nLABEL version=0.0.2\nLABEL foo=bar" | podman build -f - --format=docker --timestamp=0 --no-cache --tag $(REPOSITORY):docker-v2-manifest-v0.0.2
