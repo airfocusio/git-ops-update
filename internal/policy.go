@@ -29,13 +29,19 @@ type ExtractStrategy interface {
 	Segments(v string) map[string]string
 }
 
+var _ ExtractStrategy = (*LexicographicExtractStrategy)(nil)
+
 type LexicographicExtractStrategy struct {
 	Pin bool
 }
 
+var _ ExtractStrategy = (*NumericExtractStrategy)(nil)
+
 type NumericExtractStrategy struct {
 	Pin bool
 }
+
+var _ ExtractStrategy = (*SemverExtractStrategy)(nil)
 
 type SemverExtractStrategy struct {
 	Relaxed          bool

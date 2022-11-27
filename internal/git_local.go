@@ -1,5 +1,7 @@
 package internal
 
+var _ GitProvider = (*LocalGitProvider)(nil)
+
 type LocalGitProvider struct {
 	Author GitAuthor
 }

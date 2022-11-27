@@ -27,7 +27,6 @@ type Change struct {
 	LineNum      int
 	OldValue     string
 	NewValue     string
-	Action       *Action
 }
 
 type Changes []Change

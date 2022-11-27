@@ -1,40 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
+  name: test
   labels:
-    app: nginx
+    app: test
 fail: fail # git-ops-update {"will":"fail1"}
 spec:
   selector:
     matchLabels:
-      app: nginx
+      app: test
   template:
     metadata:
       labels:
-        app: nginx
+        app: test
     spec:
       containers:
-        - name: nginx
-          image: nginx:1.19-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}
+        - name: test
+          image: ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.1 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"docker-v2-manifest-list-","format":"docker-image","action":"push"}
 
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx2
+  name: test2
   labels:
-    app: nginx2
+    app: test2
 spec:
   selector:
     matchLabels:
-      app: nginx2
+      app: test2
   template:
     metadata:
       labels:
-        app: nginx2
+        app: test2
     spec:
       containers:
-        - image: nginx:1.19-alpine # git-ops-update {"registry":"my-docker-registry","resource":"library/nginx","policy":"my-semver-policy","format":"docker-image","action":"push","suffix":"-alpine"}
-          name: nginx
+        - image: ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.1 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"docker-v2-manifest-list-","format":"docker-image","action":"push"}
+          name: test

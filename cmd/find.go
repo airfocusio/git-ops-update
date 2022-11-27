@@ -61,19 +61,32 @@ var (
 			}
 			cacheFile := internal.FileResolvePath(dir, ".git-ops-update.cache.yaml")
 			cacheProvider := internal.FileCacheProvider{File: cacheFile}
-			result := internal.ApplyUpdates(dir, *config, cacheProvider, findCmdDry)
-
+			result := internal.DetectUpdates(dir, *config, cacheProvider)
 			errorCount := 0
-			for _, r := range result {
-				if r.Error != nil {
-					errorCount += 1
-					internal.LogError("%v", r.Error)
-				} else if r.SkipMessage == "dry run" {
-					internal.LogInfo("%s:%d from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
-				} else if r.SkipMessage != "" {
-					internal.LogDebug("%s:%d the version could have been updated from %s to %s but as skipped (%s)", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion, r.SkipMessage)
-				} else {
-					internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
+
+			if findCmdDry {
+				for _, r := range result {
+					if r.Error != nil {
+						errorCount += 1
+						internal.LogError("%v", r.Error)
+					} else if r.Change != nil && r.Action != nil {
+						internal.LogInfo("%s:%d the version can be updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
+					}
+				}
+			} else {
+				for _, r := range result {
+					if r.Error != nil {
+						errorCount += 1
+						internal.LogError("%v", r.Error)
+					} else if r.Change != nil && r.Action != nil {
+						err := internal.ApplyUpdate(dir, *config, cacheProvider, *r.Action, *r.Change)
+						if err != nil {
+							errorCount += 1
+							internal.LogError("%v", r.Error)
+						} else {
+							internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
+						}
+					}
 				}
 			}
 

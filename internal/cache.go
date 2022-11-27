@@ -51,6 +51,8 @@ func (c Cache) FindResource(registryName string, resourceName string) *CacheReso
 	return nil
 }
 
+var _ CacheProvider = (*FileCacheProvider)(nil)
+
 type FileCacheProvider struct {
 	File string
 }

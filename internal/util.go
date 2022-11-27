@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-func FileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) ([]string, error) {
+func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) ([]string, error) {
 	defaultExclude := regexp.MustCompile(`\/\.git-ops-update(\.cache)?\.yaml$`)
 	files := []string{}
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -46,30 +46,6 @@ func FileResolvePath(dir string, file string) string {
 		return filepath.Join(dir, file)
 	}
 	return file
-}
-
-func fileReadYaml(file string, v interface{}) error {
-	bytes, err := os.ReadFile(file)
-	if err != nil {
-		return err
-	}
-	err = readYaml(bytes, v)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func fileWriteYaml(file string, v interface{}) error {
-	bytes, err := writeYaml(v)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(file, bytes, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func validateName(name string) bool {

@@ -11,6 +11,8 @@ type Format interface {
 	ReplaceVersion(str string, version string) (*string, error)
 }
 
+var _ Format = (*PlainFormat)(nil)
+
 type PlainFormat struct{}
 
 func (f PlainFormat) ExtractVersion(str string) (*string, error) {
@@ -20,6 +22,8 @@ func (f PlainFormat) ExtractVersion(str string) (*string, error) {
 func (f PlainFormat) ReplaceVersion(str string, version string) (*string, error) {
 	return &version, nil
 }
+
+var _ Format = (*DockerImageFormat)(nil)
 
 type DockerImageFormat struct{}
 
@@ -39,6 +43,8 @@ func (f DockerImageFormat) ReplaceVersion(str string, version string) (*string, 
 	result := segments[0] + ":" + version
 	return &result, nil
 }
+
+var _ Format = (*RegexpFormat)(nil)
 
 type RegexpFormat struct {
 	Pattern regexp.Regexp

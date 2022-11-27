@@ -8,9 +8,9 @@ import (
 
 func TestDockerFetchVersions(t *testing.T) {
 	reg1 := DockerRegistry{
-		Url: "https://registry-1.docker.io",
+		Url: "https://ghcr.io",
 	}
-	output1, err := reg1.FetchVersions("library/nginx")
+	output1, err := reg1.FetchVersions("airfocusio/git-ops-update")
 	assert.NoError(t, err)
 	assert.Greater(t, len(output1), 0)
 
@@ -24,11 +24,15 @@ func TestDockerFetchVersions(t *testing.T) {
 
 func TestDockerRetrieveMetadata(t *testing.T) {
 	reg1 := DockerRegistry{
-		Url: "https://registry-1.docker.io",
+		Url: "https://ghcr.io",
 	}
-	output1, err := reg1.RetrieveMetadata("library/nginx", "1.23.0")
+	output1a, err := reg1.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-list-v0.0.1")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}, output1)
+	assert.Equal(t, map[string]string{"foo": "bar", "io.buildah.version": "1.23.1", "version": "0.0.1"}, output1a)
+
+	output1b, err := reg1.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-image-index-v0.0.1")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"foo": "bar", "io.buildah.version": "1.23.1", "version": "0.0.1"}, output1b)
 
 	reg2 := DockerRegistry{
 		Url: "https://quay.io",

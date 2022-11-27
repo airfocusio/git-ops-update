@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
+var _ Registry = (*HelmRegistry)(nil)
+
 type HelmRegistry struct {
 	Interval    time.Duration
 	Url         string
 	Credentials HttpBasicCredentials
 }
-
-var _ Registry = (*HelmRegistry)(nil)
 
 type helmRegistryIndex struct {
 	ApiVersion string `yaml:"apiVersion"`

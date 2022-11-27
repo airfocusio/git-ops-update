@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
+var _ Registry = (*GitHubTagRegistry)(nil)
+
 type GitHubTagRegistry struct {
 	Interval    time.Duration
 	Url         string
 	Credentials HttpBasicCredentials
 }
-
-var _ Registry = (*GitHubTagRegistry)(nil)
 
 type gitHubTagRegistryRef struct {
 	Ref    string `json:"ref"`

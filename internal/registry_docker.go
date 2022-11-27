@@ -12,13 +12,13 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 )
 
+var _ Registry = (*DockerRegistry)(nil)
+
 type DockerRegistry struct {
 	Interval    time.Duration
 	Url         string
 	Credentials HttpBasicCredentials
 }
-
-var _ Registry = (*DockerRegistry)(nil)
 
 func (r DockerRegistry) GetInterval() time.Duration {
 	return r.Interval

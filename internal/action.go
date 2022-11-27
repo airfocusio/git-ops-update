@@ -7,32 +7,42 @@ import (
 )
 
 type Action interface {
+	Identifier() string
 	Apply(dir string, changes Changes) error
-	AlreadyApplied(dir string, changes Changes) bool
 }
+
+var _ Action = (*PushAction)(nil)
 
 type PushAction struct {
 	git  GitProvider
 	exec []string
 }
 
+func (c PushAction) Identifier() string {
+	return "push"
+}
+
 func (a PushAction) Apply(dir string, changes Changes) error {
 	return a.git.Push(dir, changes, execCallbacks(dir, a.exec)...)
 }
-func (a PushAction) AlreadyApplied(dir string, changes Changes) bool {
-	return false
-}
+
+var _ Action = (*RequestAction)(nil)
 
 type RequestAction struct {
 	git  GitProvider
 	exec []string
 }
 
-func (a RequestAction) Apply(dir string, changes Changes) error {
-	return a.git.Request(dir, changes, execCallbacks(dir, a.exec)...)
+func (c RequestAction) Identifier() string {
+	return "request"
 }
-func (a RequestAction) AlreadyApplied(dir string, changes Changes) bool {
-	return a.git.AlreadyRequested(dir, changes)
+
+func (a RequestAction) Apply(dir string, changes Changes) error {
+	alreadyDone := a.git.AlreadyRequested(dir, changes)
+	if alreadyDone {
+		return nil
+	}
+	return a.git.Request(dir, changes, execCallbacks(dir, a.exec)...)
 }
 
 func getAction(p GitProvider, actionName string, exec []string) (*Action, error) {

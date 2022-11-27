@@ -14,6 +14,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var _ GitProvider = (*GitHubGitProvider)(nil)
+
 type GitHubGitProvider struct {
 	Author      GitAuthor
 	AccessToken string

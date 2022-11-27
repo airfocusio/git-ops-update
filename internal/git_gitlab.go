@@ -12,6 +12,8 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+var _ GitProvider = (*GitLabGitProvider)(nil)
+
 type GitLabGitProvider struct {
 	Author      GitAuthor
 	URL         string

@@ -43,20 +43,20 @@ func TestDetectUpdates(t *testing.T) {
 						change := result[0].Change
 						assert.Equal(t, "deployment.yaml", change.File)
 						assert.Equal(t, 19, change.LineNum)
-						assert.Equal(t, "1.19-alpine", change.OldVersion)
-						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
-						assert.Equal(t, "nginx:1.19-alpine", change.OldValue)
-						assert.Equal(t, "nginx:1.19.1-alpine", change.NewValue)
+						assert.Equal(t, "docker-v2-manifest-list-v0.0.1", change.OldVersion)
+						assert.Equal(t, "docker-v2-manifest-list-v0.0.2", change.NewVersion)
+						assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.1", change.OldValue)
+						assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.2", change.NewValue)
 					}
 
 					if assert.NotNil(t, result[1].Change) {
 						change := result[1].Change
 						assert.Equal(t, "deployment.yaml", change.File)
 						assert.Equal(t, 39, change.LineNum)
-						assert.Equal(t, "1.19-alpine", change.OldVersion)
-						assert.Equal(t, "1.19.1-alpine", change.NewVersion)
-						assert.Equal(t, "nginx:1.19-alpine", change.OldValue)
-						assert.Equal(t, "nginx:1.19.1-alpine", change.NewValue)
+						assert.Equal(t, "docker-v2-manifest-list-v0.0.1", change.OldVersion)
+						assert.Equal(t, "docker-v2-manifest-list-v0.0.2", change.NewVersion)
+						assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.1", change.OldValue)
+						assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-list-v0.0.2", change.NewValue)
 					}
 
 					if assert.NotNil(t, result[2].Error) {

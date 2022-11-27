@@ -30,9 +30,9 @@ func GuessFileFormatFromExtension(file string) (FileFormat, error) {
 	}
 }
 
-type YamlFileFormat struct{}
-
 var _ FileFormat = (*YamlFileFormat)(nil)
+
+type YamlFileFormat struct{}
 
 func (f YamlFileFormat) ExtractAnnotations(lines []string) ([]FileFormatAnnotation, error) {
 	documentsLines := [][]string{{}}

@@ -13,35 +13,15 @@ import (
 type UpdateVersionResult struct {
 	Error  error
 	Change *Change
-
-	SkipMessage string
+	Action *Action
 }
 
-func ApplyUpdates(dir string, config Config, cacheProvider CacheProvider, dry bool) []UpdateVersionResult {
-	result := DetectUpdates(dir, config, cacheProvider)
-
-	for i := range result {
-		result := &result[i]
-		if result.Error == nil && result.Change != nil {
-			if !dry {
-				changes := Changes{*result.Change}
-				if result.Change.Action == nil {
-					result.SkipMessage = "marked as disabled"
-				} else if (*result.Change.Action).AlreadyApplied(dir, changes) {
-					result.SkipMessage = "already applied"
-				} else {
-					err := (*result.Change.Action).Apply(dir, changes)
-					if err != nil {
-						result.Error = fmt.Errorf("%s:%d: %w", result.Change.File, result.Change.LineNum, err)
-					}
-				}
-			} else {
-				result.SkipMessage = "dry run"
-			}
-		}
+func ApplyUpdate(dir string, config Config, cacheProvider CacheProvider, action Action, change Change) error {
+	changes := Changes{change}
+	if err := action.Apply(dir, changes); err != nil {
+		return fmt.Errorf("%s:%d: %w", change.File, change.LineNum, err)
 	}
-
-	return result
+	return nil
 }
 
 func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []UpdateVersionResult {
@@ -51,7 +31,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 		cache = &Cache{}
 	}
 
-	files, err := FileList(dir, config.Files.Includes, config.Files.Excludes)
+	files, err := fileList(dir, config.Files.Includes, config.Files.Excludes)
 	if err != nil {
 		return []UpdateVersionResult{{Error: err}}
 	}
@@ -159,9 +139,8 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					LineNum:      fileAnnotation.LineNum,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
-					Action:       annotation.Action,
 				}
-				result = append(result, UpdateVersionResult{Change: &change})
+				result = append(result, UpdateVersionResult{Change: &change, Action: annotation.Action})
 			}
 		}
 		for _, err := range errs {

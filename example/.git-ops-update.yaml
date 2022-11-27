@@ -8,7 +8,7 @@ registries:
   my-docker-registry:
     type: docker
     interval: 1h
-    url: https://registry-1.docker.io
+    url: https://ghcr.io
   my-helm-registry:
     type: helm
     interval: 1h
