@@ -9,13 +9,13 @@ import (
 var c1 = Change{
 	RegistryName: "my-registry",
 	ResourceName: "my-resource",
-	Metadata:     map[string]string{"someNumber": "1", "anotherNumber": "2"},
 	OldVersion:   "1.0.0",
 	NewVersion:   "2.0.0",
 	OldValue:     "my-image:1.0.0",
 	NewValue:     "my-image:2.0.0",
 	File:         "folder/file.yaml",
 	LineNum:      3,
+	Comments:     "Line",
 }
 
 var c2 = Change{
@@ -27,12 +27,12 @@ var c2 = Change{
 	NewValue:     "my-image2:4.0.0",
 	File:         "folder/file2.yaml",
 	LineNum:      10,
+	Comments:     "Multi\nLine\n",
 }
 
 var c3 = Change{
 	RegistryName: "my-registry3",
 	ResourceName: "my-resource3",
-	Metadata:     map[string]string{"Message": "Hello\n\nWorld"},
 	OldVersion:   "5.0.0",
 	NewVersion:   "6.0.0",
 	OldValue:     "my-image3:5.0.0",
@@ -52,10 +52,10 @@ func TestChangesTitle(t *testing.T) {
 }
 
 func TestChangesMessage(t *testing.T) {
-	assert.Equal(t, "* Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\n    * Another Number: 2\n    * Some Number: 1", Changes{c1}.Message())
-	assert.Equal(t, "* Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\n    * Another Number: 2\n    * Some Number: 1\n* Update folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0", Changes{c1, c2}.Message())
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine", Changes{c1}.Message())
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine", Changes{c1, c2}.Message())
 
-	assert.Equal(t, "* Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0\n    * Message: Hello\n        \n        World", Changes{c3}.Message())
+	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", Changes{c3}.Message())
 }
 
 func TestChangesBranch(t *testing.T) {

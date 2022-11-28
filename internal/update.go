@@ -123,15 +123,9 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
-				metadata, err := (*annotation.Registry).RetrieveMetadata(annotation.ResourceName, *nextVersion)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
-					continue
-				}
 				change := Change{
 					RegistryName: annotation.RegistryName,
 					ResourceName: annotation.ResourceName,
-					Metadata:     metadata,
 					OldVersion:   *currentVersion,
 					NewVersion:   *nextVersion,
 					File:         fileRel,
@@ -140,6 +134,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
 				}
+				change.Comments = RenderChangeComments(dir, config, change)
 				result = append(result, UpdateVersionResult{Change: &change, Action: annotation.Action})
 			}
 		}
@@ -149,6 +144,21 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 	}
 
 	return result
+}
+
+func RenderChangeComments(dir string, config Config, change Change) string {
+	augmenterMessages := []string{}
+	for _, a := range config.Augmenters {
+		augmenterMessage, err := a.RenderMessage(config, change)
+		if err == nil {
+			if augmenterMessage != "" {
+				augmenterMessages = append(augmenterMessages, augmenterMessage)
+			}
+		} else {
+			LogWarning("Unable to augment: %v", err)
+		}
+	}
+	return strings.Join(augmenterMessages, "\n\n")
 }
 
 type annotation struct {

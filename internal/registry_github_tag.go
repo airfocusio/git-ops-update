@@ -71,8 +71,3 @@ func (r GitHubTagRegistry) FetchVersions(repository string) ([]string, error) {
 
 	return result, nil
 }
-
-func (r GitHubTagRegistry) RetrieveMetadata(resource string, version string) (map[string]string, error) {
-	url := fmt.Sprintf("https://github.com/%s/releases/tag/%s", resource, version)
-	return map[string]string{"releaseUrl": url}, nil
-}

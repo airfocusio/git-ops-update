@@ -7,13 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/iancoleman/strcase"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type Change struct {
@@ -21,12 +16,12 @@ type Change struct {
 	ResourceName string
 	OldVersion   string
 	NewVersion   string
-	Metadata     map[string]string
 	File         string
 	FileFormat   FileFormat
 	LineNum      int
 	OldValue     string
 	NewValue     string
+	Comments     string
 }
 
 type Changes []Change
@@ -90,26 +85,11 @@ func (cs Changes) Title() string {
 }
 
 func (cs Changes) Message() string {
-	lines := []string{}
+	changeCommments := []string{}
 	for _, c := range cs {
-		lines = append(lines, "* "+c.Message())
-		metadataKeys := make([]string, 0)
-		for k := range c.Metadata {
-			metadataKeys = append(metadataKeys, k)
-		}
-		sort.Strings(metadataKeys)
-		for _, k := range metadataKeys {
-			value := c.Metadata[k]
-			valueLines := strings.Split(value, "\n")
-			for i := 1; i < len(valueLines); i++ {
-				valueLines[i] = "        " + valueLines[i]
-			}
-			indentedValue := strings.Join(valueLines, "\n")
-			niceKey := cases.Title(language.English).String(strcase.ToDelimited(k, ' '))
-			lines = append(lines, "    * "+niceKey+": "+indentedValue)
-		}
+		changeCommments = append(changeCommments, strings.Trim(c.Message()+"\n"+c.Comments, "\n "))
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(changeCommments, "\n\n---\n\n")
 }
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
