@@ -1,0 +1,17 @@
+name: generate-test-images
+on:
+  push:
+    branches:
+      - test-docker
+jobs:
+  generate-test-images:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Log in to ghcr.io
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - run: .github/workflows/generate-test-images.sh
