@@ -38,10 +38,6 @@ func (c RequestAction) Identifier() string {
 }
 
 func (a RequestAction) Apply(dir string, changes Changes) error {
-	alreadyDone := a.git.AlreadyRequested(dir, changes)
-	if alreadyDone {
-		return nil
-	}
 	return a.git.Request(dir, changes, execCallbacks(dir, a.exec)...)
 }
 

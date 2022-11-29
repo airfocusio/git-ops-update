@@ -41,9 +41,16 @@ var c3 = Change{
 	LineNum:      16,
 }
 
-func TestChangeIdentifier(t *testing.T) {
-	assert.Equal(t, "folder/file.yaml#3#my-image:2.0.0", c1.Identifier())
-	assert.Equal(t, "folder/file2.yaml#10#my-image2:4.0.0", c2.Identifier())
+func TestChangesGroupHash(t *testing.T) {
+	assert.Equal(t, "cdb34bd928617494", Changes{c1}.GroupHash())
+	assert.Equal(t, "79baa33623f66cab", Changes{c2}.GroupHash())
+	assert.Equal(t, "7828b1505ed039e7", Changes{c1, c2}.GroupHash())
+}
+
+func TestChangesHash(t *testing.T) {
+	assert.Equal(t, "f947389f23a7d6f7", Changes{c1}.Hash())
+	assert.Equal(t, "c3de406196d88bed", Changes{c2}.Hash())
+	assert.Equal(t, "cf0b28c1d50d0788", Changes{c1, c2}.Hash())
 }
 
 func TestChangesTitle(t *testing.T) {
@@ -59,6 +66,6 @@ func TestChangesMessage(t *testing.T) {
 }
 
 func TestChangesBranch(t *testing.T) {
-	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0/f947389f23a7d6f7", Changes{c1}.Branch("git-ops-update"))
-	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0-my-registry2-my-resource2-4.0.0/cf0b28c1d50d0788", Changes{c1, c2}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0/cdb34bd928617494/f947389f23a7d6f7", Changes{c1}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0-my-registry2-my-resource2-4.0.0/7828b1505ed039e7/cf0b28c1d50d0788", Changes{c1, c2}.Branch("git-ops-update"))
 }

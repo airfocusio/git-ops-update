@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
@@ -60,8 +61,42 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to get git remote origin: %w", err)
 	}
+	remoteRefs, err := remote.List(&git.ListOptions{
+		Auth: &http.BasicAuth{
+			Username: "api",
+			Password: p.AccessToken,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("unable to list git branches: %w", err)
+	}
+	projectId, err := extractGitLabProjectIdFromRemote(p.URL, *remote)
+	if err != nil {
+		return fmt.Errorf("unable to extract gitlab project id from remote origin: %w", err)
+	}
+
+	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
+	targetBranchGroupHash := changes.GroupHash()
+	targetBranchHash := changes.Hash()
+	targetBranchExists := false
+	for _, ref := range remoteRefs {
+		refName := ref.Name().String()
+		if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchHash) {
+			targetBranchExists = true
+		} else if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchGroupHash) {
+			LogDebug("Removing branch %s from gitlab project %s", refName, *projectId)
+			err := remote.Push(&git.PushOptions{
+				RefSpecs: []config.RefSpec{
+					config.RefSpec(":" + refName),
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if targetBranchExists {
+		return nil
 	}
 	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
 
@@ -88,10 +123,6 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to push changes: %w", err)
 	}
 
-	projectId, err := extractGitLabProjectIdFromRemote(p.URL, *remote)
-	if err != nil {
-		return fmt.Errorf("unable to extract gitlab project id from remote origin: %w", err)
-	}
 	LogDebug("Creating pull request for branch %s to gitlab project %s", targetBranch.Short(), *projectId)
 	client, err := gitlab.NewOAuthClient(
 		p.AccessToken,
@@ -127,37 +158,6 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to checkout to base branch: %w", err)
 	}
 	return nil
-}
-
-func (p GitLabGitProvider) AlreadyRequested(dir string, changes Changes) bool {
-	repo, err := git.PlainOpen(dir)
-	if err != nil {
-		return false
-	}
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		return false
-	}
-	remoteRefs, err := remote.List(&git.ListOptions{
-		Auth: &http.BasicAuth{
-			Username: "api",
-			Password: p.AccessToken,
-		},
-	})
-	if err != nil {
-		return false
-	}
-	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
-	targetBranchFindSuffix := changes.BranchFindSuffix()
-	targetBranchExists := false
-	for _, ref := range remoteRefs {
-		refName := ref.Name().String()
-		if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.HasSuffix(refName, targetBranchFindSuffix) {
-			targetBranchExists = true
-			break
-		}
-	}
-	return targetBranchExists
 }
 
 func extractGitLabProjectIdFromRemote(baseURL string, remote git.Remote) (*string, error) {

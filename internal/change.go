@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -28,23 +27,24 @@ type Changes []Change
 
 const gitHubMaxPullRequestTitleLength = 256
 
-func (c Change) Identifier() string {
-	return c.File + "#" + strconv.Itoa(c.LineNum) + "#" + c.NewValue
-}
-
-func (c Change) Hash() []byte {
-	identifier := c.Identifier()
-	hash := sha256.Sum256([]byte(identifier))
-	return hash[:]
-}
-
-func (cs Changes) Hash() []byte {
+func (cs Changes) GroupHash() string {
 	temp := []byte{}
 	for _, c := range cs {
-		temp = append(temp, c.Hash()...)
+		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d", c.File, c.LineNum)))
+		temp = append(temp, cHash[:]...)
 	}
 	hash := sha256.Sum256(temp)
-	return hash[:]
+	return capString(hex.EncodeToString(hash[:]), 16)
+}
+
+func (cs Changes) Hash() string {
+	temp := []byte{}
+	for _, c := range cs {
+		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d#%s", c.File, c.LineNum, c.NewValue)))
+		temp = append(temp, cHash[:]...)
+	}
+	hash := sha256.Sum256(temp)
+	return capString(hex.EncodeToString(hash[:]), 16)
 }
 
 func (cs Changes) Branch(prefix string) string {
@@ -54,18 +54,15 @@ func (cs Changes) Branch(prefix string) string {
 	}
 
 	return fmt.Sprintf(
-		"%s/%s/%s",
+		"%s/%s/%s/%s",
 		cs.BranchFindPrefix(prefix),
 		capString(dashCased(strings.Join(updates, "-")), 128),
-		cs.BranchFindSuffix())
+		cs.GroupHash(),
+		cs.Hash())
 }
 
 func (cs Changes) BranchFindPrefix(prefix string) string {
 	return prefix
-}
-
-func (cs Changes) BranchFindSuffix() string {
-	return capString(hex.EncodeToString(cs.Hash()), 16)
 }
 
 func (c Change) Message() string {
