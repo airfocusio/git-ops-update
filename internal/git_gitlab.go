@@ -86,6 +86,10 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		} else if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchGroupHash) {
 			LogDebug("Removing branch %s from gitlab project %s", refName, *projectId)
 			err := remote.Push(&git.PushOptions{
+				Auth: &http.BasicAuth{
+					Username: "api",
+					Password: p.AccessToken,
+				},
 				RefSpecs: []config.RefSpec{
 					config.RefSpec(":" + refName),
 				},

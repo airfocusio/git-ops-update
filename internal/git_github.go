@@ -86,6 +86,10 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		} else if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchGroupHash) {
 			LogDebug("Removing branch %s from github repository %s/%s", refName, *ownerName, *repoName)
 			err := remote.Push(&git.PushOptions{
+				Auth: &http.BasicAuth{
+					Username: "api",
+					Password: p.AccessToken,
+				},
 				RefSpecs: []config.RefSpec{
 					config.RefSpec(":" + refName),
 				},
