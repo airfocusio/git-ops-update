@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: test
-          image: ghcr.io/airfocusio/git-ops-update-test:test-v0.3.0 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"test-","format":"docker-image","action":"push"}
+          image: ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.1 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"docker-v2-manifest-","format":"docker-image","action":"push"}
 
 ---
 
@@ -36,5 +36,5 @@ spec:
         app: test2
     spec:
       containers:
-        - image: ghcr.io/airfocusio/git-ops-update-test:test-v0.3.0 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"test-","format":"docker-image","action":"push"}
+        - image: ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.1 # git-ops-update {"registry":"my-docker-registry","resource":"airfocusio/git-ops-update-test","policy":"my-semver-policy","prefix":"docker-v2-manifest-","format":"docker-image","action":"push"}
           name: test

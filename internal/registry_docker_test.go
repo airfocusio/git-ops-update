@@ -28,11 +28,21 @@ func TestDockerRetrieveMetadata(t *testing.T) {
 	}
 	output1a, err := reg1.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-list-v0.0.1")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"foo": "bar", "io.buildah.version": "1.23.1", "version": "0.0.1"}, output1a)
+	assert.Equal(t, map[string]string{
+		"io.buildah.version":                "1.23.1",
+		"org.opencontainers.image.version":  "0.0.1",
+		"org.opencontainers.image.source":   "https://github.com/airfocusio/git-ops-update",
+		"org.opencontainers.image.revision": "99a7aaa2eff5aff7c77d9caf0901454fedf6bf00",
+	}, output1a)
 
 	output1b, err := reg1.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-image-index-v0.0.1")
 	assert.NoError(t, err)
-	assert.Equal(t, map[string]string{"foo": "bar", "io.buildah.version": "1.23.1", "version": "0.0.1"}, output1b)
+	assert.Equal(t, map[string]string{
+		"io.buildah.version":                "1.23.1",
+		"org.opencontainers.image.version":  "0.0.1",
+		"org.opencontainers.image.source":   "https://github.com/airfocusio/git-ops-update",
+		"org.opencontainers.image.revision": "99a7aaa2eff5aff7c77d9caf0901454fedf6bf00",
+	}, output1b)
 
 	reg2 := DockerRegistry{
 		Url: "https://quay.io",
@@ -48,8 +58,8 @@ func TestDockerRetrieveDockerV2ManifestMetadata(t *testing.T) {
 	}
 	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-v0.0.1")
 	assert.NoError(t, err)
-	assert.Contains(t, output, "foo")
-	assert.Equal(t, "bar", output["foo"])
+	assert.Contains(t, output, "org.opencontainers.image.version")
+	assert.Equal(t, "0.0.1", output["org.opencontainers.image.version"])
 }
 
 func TestDockerRetrieveDockerV2ManifestListMetadata(t *testing.T) {
@@ -58,8 +68,8 @@ func TestDockerRetrieveDockerV2ManifestListMetadata(t *testing.T) {
 	}
 	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "docker-v2-manifest-list-v0.0.1")
 	assert.NoError(t, err)
-	assert.Contains(t, output, "foo")
-	assert.Equal(t, "bar", output["foo"])
+	assert.Contains(t, output, "org.opencontainers.image.version")
+	assert.Equal(t, "0.0.1", output["org.opencontainers.image.version"])
 }
 
 func TestDockerRetrieveOciV1ManifestMetadata(t *testing.T) {
@@ -68,8 +78,8 @@ func TestDockerRetrieveOciV1ManifestMetadata(t *testing.T) {
 	}
 	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-manifest-v0.0.1")
 	assert.NoError(t, err)
-	assert.Contains(t, output, "foo")
-	assert.Equal(t, "bar", output["foo"])
+	assert.Contains(t, output, "org.opencontainers.image.version")
+	assert.Equal(t, "0.0.1", output["org.opencontainers.image.version"])
 }
 
 func TestDockerRetrieveOciV1ImageIndexMetadata(t *testing.T) {
@@ -78,6 +88,6 @@ func TestDockerRetrieveOciV1ImageIndexMetadata(t *testing.T) {
 	}
 	output, err := reg.RetrieveMetadata("airfocusio/git-ops-update-test", "oci-v1-image-index-v0.0.1")
 	assert.NoError(t, err)
-	assert.Contains(t, output, "foo")
-	assert.Equal(t, "bar", output["foo"])
+	assert.Contains(t, output, "org.opencontainers.image.version")
+	assert.Equal(t, "0.0.1", output["org.opencontainers.image.version"])
 }

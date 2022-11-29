@@ -14,7 +14,7 @@ func TestDetectUpdates(t *testing.T) {
 			{
 				RegistryName: "my-docker-registry",
 				ResourceName: "airfocusio/git-ops-update-test",
-				Versions:     []string{"test-v0.3.0", "test-v0.4.0"},
+				Versions:     []string{"docker-v2-manifest-v0.0.1", "docker-v2-manifest-v0.0.2"},
 				Timestamp:    time.Now(),
 			},
 			{
@@ -74,20 +74,20 @@ func TestDetectUpdates(t *testing.T) {
 			change := result[0].Change
 			assert.Equal(t, "update_test_deployment.yaml", change.File)
 			assert.Equal(t, 19, change.LineNum)
-			assert.Equal(t, "test-v0.3.0", change.OldVersion)
-			assert.Equal(t, "test-v0.4.0", change.NewVersion)
-			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:test-v0.3.0", change.OldValue)
-			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:test-v0.4.0", change.NewValue)
+			assert.Equal(t, "docker-v2-manifest-v0.0.1", change.OldVersion)
+			assert.Equal(t, "docker-v2-manifest-v0.0.2", change.NewVersion)
+			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.1", change.OldValue)
+			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.2", change.NewValue)
 		}
 
 		if assert.NotNil(t, result[1].Change) {
 			change := result[1].Change
 			assert.Equal(t, "update_test_deployment.yaml", change.File)
 			assert.Equal(t, 39, change.LineNum)
-			assert.Equal(t, "test-v0.3.0", change.OldVersion)
-			assert.Equal(t, "test-v0.4.0", change.NewVersion)
-			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:test-v0.3.0", change.OldValue)
-			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:test-v0.4.0", change.NewValue)
+			assert.Equal(t, "docker-v2-manifest-v0.0.1", change.OldVersion)
+			assert.Equal(t, "docker-v2-manifest-v0.0.2", change.NewVersion)
+			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.1", change.OldValue)
+			assert.Equal(t, "ghcr.io/airfocusio/git-ops-update-test:docker-v2-manifest-v0.0.2", change.NewValue)
 		}
 
 		if assert.NotNil(t, result[2].Error) {
