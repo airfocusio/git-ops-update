@@ -91,7 +91,7 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 				},
 			})
 			if err != nil {
-				return err
+				LogWarning("Unable to remove branch %s from gitlab project %s: %v", refName, *projectId, err)
 			}
 		}
 	}

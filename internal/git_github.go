@@ -91,7 +91,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 				},
 			})
 			if err != nil {
-				return err
+				LogWarning("Unable to remove branch %s from github repository %s/%s: %v", refName, *ownerName, *repoName, err)
 			}
 		}
 	}
