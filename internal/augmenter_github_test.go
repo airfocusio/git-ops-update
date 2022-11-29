@@ -32,3 +32,37 @@ func TestGithubAugmenterRenderMessage(t *testing.T) {
 		)
 	}
 }
+
+func TestGithubAugmenterExtractPullRequestLinks(t *testing.T) {
+	a := GithubAugmenter{}
+
+	t.Run("empty", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestLinks("airfocusio", "git-ops-update", "")
+		assert.Equal(t, "", text)
+		assert.Equal(t, []string{}, prs)
+	})
+
+	t.Run("none", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestLinks("airfocusio", "git-ops-update", "Hello World")
+		assert.Equal(t, "Hello World", text)
+		assert.Equal(t, []string{}, prs)
+	})
+
+	t.Run("single", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestLinks("airfocusio", "git-ops-update", "Hello World #1")
+		assert.Equal(t, "Hello World", text)
+		assert.Equal(t, []string{"https://github.com/airfocusio/git-ops-update/pull/1"}, prs)
+	})
+
+	t.Run("single in parentheses", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestLinks("airfocusio", "git-ops-update", "Hello World (#1)")
+		assert.Equal(t, "Hello World", text)
+		assert.Equal(t, []string{"https://github.com/airfocusio/git-ops-update/pull/1"}, prs)
+	})
+
+	t.Run("multiple", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestLinks("airfocusio", "git-ops-update", "Hello World (#1)\n\nAnother one (#234)")
+		assert.Equal(t, "Hello World\n\nAnother one", text)
+		assert.Equal(t, []string{"https://github.com/airfocusio/git-ops-update/pull/1", "https://github.com/airfocusio/git-ops-update/pull/234"}, prs)
+	})
+}

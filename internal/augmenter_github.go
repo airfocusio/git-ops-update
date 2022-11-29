@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-github/v40/github"
@@ -69,8 +70,17 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 		defer res.Body.Close()
 		if err == nil && comparison != nil {
 			for _, commit := range comparison.Commits {
-				if commit.Commit != nil && commit.HTMLURL != nil && commit.Commit.Message != nil {
-					result = result + fmt.Sprintf("* %s %s", *commit.Commit.Message, *commit.HTMLURL) + "\n"
+				if commit.Commit != nil && commit.HTMLURL != nil {
+					title := "???"
+					if commit.Commit.Message != nil {
+						message, prs := a.ExtractPullRequestLinks(owner, repo, *commit.Commit.Message)
+						tmp := strings.Trim(strings.Split(message, "\n")[0], " ")
+						if tmp != "" {
+							title = tmp
+						}
+						title = strings.Trim(title+" "+strings.Join(prs, " "), " ")
+					}
+					result = result + fmt.Sprintf("* %s %s", title, *commit.HTMLURL) + "\n"
 				}
 			}
 		}
@@ -84,4 +94,16 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 	}
 
 	return "", nil
+}
+
+func (a GithubAugmenter) ExtractPullRequestLinks(owner string, repo string, text string) (string, []string) {
+	pullRequestNumberRegex := regexp.MustCompile(`\(?#(?P<number>\d+)\)?`)
+	pullRequestLinks := []string{}
+	matches := pullRequestNumberRegex.FindAllStringSubmatch(text, 100)
+	for _, m := range matches {
+		if pullRequestNumber, err := strconv.Atoi(m[1]); err == nil {
+			pullRequestLinks = append(pullRequestLinks, fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, pullRequestNumber))
+		}
+	}
+	return trimRightMultilineString(pullRequestNumberRegex.ReplaceAllLiteralString(text, ""), " "), pullRequestLinks
 }
