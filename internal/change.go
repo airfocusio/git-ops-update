@@ -7,13 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
-
-	"github.com/iancoleman/strcase"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type Change struct {
@@ -21,35 +15,36 @@ type Change struct {
 	ResourceName string
 	OldVersion   string
 	NewVersion   string
-	Metadata     map[string]string
 	File         string
 	FileFormat   FileFormat
 	LineNum      int
 	OldValue     string
 	NewValue     string
+	Comments     string
 }
 
 type Changes []Change
 
 const gitHubMaxPullRequestTitleLength = 256
 
-func (c Change) Identifier() string {
-	return c.File + "#" + strconv.Itoa(c.LineNum) + "#" + c.NewValue
-}
-
-func (c Change) Hash() []byte {
-	identifier := c.Identifier()
-	hash := sha256.Sum256([]byte(identifier))
-	return hash[:]
-}
-
-func (cs Changes) Hash() []byte {
+func (cs Changes) GroupHash() string {
 	temp := []byte{}
 	for _, c := range cs {
-		temp = append(temp, c.Hash()...)
+		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d", c.File, c.LineNum)))
+		temp = append(temp, cHash[:]...)
 	}
 	hash := sha256.Sum256(temp)
-	return hash[:]
+	return capString(hex.EncodeToString(hash[:]), 16)
+}
+
+func (cs Changes) Hash() string {
+	temp := []byte{}
+	for _, c := range cs {
+		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d#%s", c.File, c.LineNum, c.NewValue)))
+		temp = append(temp, cHash[:]...)
+	}
+	hash := sha256.Sum256(temp)
+	return capString(hex.EncodeToString(hash[:]), 16)
 }
 
 func (cs Changes) Branch(prefix string) string {
@@ -59,18 +54,15 @@ func (cs Changes) Branch(prefix string) string {
 	}
 
 	return fmt.Sprintf(
-		"%s/%s/%s",
+		"%s/%s/%s/%s",
 		cs.BranchFindPrefix(prefix),
 		capString(dashCased(strings.Join(updates, "-")), 128),
-		cs.BranchFindSuffix())
+		cs.GroupHash(),
+		cs.Hash())
 }
 
 func (cs Changes) BranchFindPrefix(prefix string) string {
 	return prefix
-}
-
-func (cs Changes) BranchFindSuffix() string {
-	return capString(hex.EncodeToString(cs.Hash()), 16)
 }
 
 func (c Change) Message() string {
@@ -90,26 +82,11 @@ func (cs Changes) Title() string {
 }
 
 func (cs Changes) Message() string {
-	lines := []string{}
+	changeCommments := []string{}
 	for _, c := range cs {
-		lines = append(lines, "* "+c.Message())
-		metadataKeys := make([]string, 0)
-		for k := range c.Metadata {
-			metadataKeys = append(metadataKeys, k)
-		}
-		sort.Strings(metadataKeys)
-		for _, k := range metadataKeys {
-			value := c.Metadata[k]
-			valueLines := strings.Split(value, "\n")
-			for i := 1; i < len(valueLines); i++ {
-				valueLines[i] = "        " + valueLines[i]
-			}
-			indentedValue := strings.Join(valueLines, "\n")
-			niceKey := cases.Title(language.English).String(strcase.ToDelimited(k, ' '))
-			lines = append(lines, "    * "+niceKey+": "+indentedValue)
-		}
+		changeCommments = append(changeCommments, strings.Trim(c.Message()+"\n"+c.Comments, "\n "))
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(changeCommments, "\n\n---\n\n")
 }
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {

@@ -69,7 +69,3 @@ func (r HelmRegistry) FetchVersions(chart string) ([]string, error) {
 
 	return result, nil
 }
-
-func (r HelmRegistry) RetrieveMetadata(resource string, version string) (map[string]string, error) {
-	return nil, nil
-}

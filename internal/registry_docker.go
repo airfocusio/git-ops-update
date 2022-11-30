@@ -62,7 +62,7 @@ func (r DockerRegistry) FetchVersions(repository string) ([]string, error) {
 	return result, nil
 }
 
-func (r DockerRegistry) RetrieveMetadata(repository string, version string) (map[string]string, error) {
+func (r DockerRegistry) RetrieveLabels(repository string, version string) (map[string]string, error) {
 	type manifestConfigJson struct {
 		MediaType string `json:"mediaType"`
 		Digest    string `json:"digest"`

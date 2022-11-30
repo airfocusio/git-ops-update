@@ -86,6 +86,11 @@ func TestLoadConfig(t *testing.T) {
 				},
 			},
 		},
+		Augmenters: []Augmenter{
+			GithubAugmenter{
+				AccessToken: "access_token",
+			},
+		},
 		Git: Git{
 			Provider: GitHubGitProvider{
 				Author: GitAuthor{
@@ -100,5 +105,6 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, c2.Files, c1.Files)
 	assert.Equal(t, c2.Registries, c1.Registries)
 	assert.Equal(t, c2.Policies, c1.Policies)
+	assert.Equal(t, c2.Augmenters, c1.Augmenters)
 	assert.Equal(t, c2.Git, c1.Git)
 }

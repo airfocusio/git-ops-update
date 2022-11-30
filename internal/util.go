@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 func fileList(dir string, includes []regexp.Regexp, excludes []regexp.Regexp) ([]string, error) {
@@ -61,4 +62,12 @@ func runCallbacks(callbacks []func() error) error {
 		}
 	}
 	return nil
+}
+
+func trimRightMultilineString(str string, cutset string) string {
+	lines := strings.Split(str, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], cutset)
+	}
+	return strings.Join(lines, "\n")
 }

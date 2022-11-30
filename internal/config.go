@@ -66,6 +66,10 @@ type RawConfigPolicy struct {
 	Extracts []map[string]interface{} `yaml:"extracts"`
 }
 
+type RawConfigAugmenterGithub struct {
+	AccessToken string `yaml:"accessToken"`
+}
+
 type RawConfigGitGitHub struct {
 	Owner       string `yaml:"owner"`
 	Repo        string `yaml:"repo"`
@@ -94,6 +98,7 @@ type RawConfig struct {
 	Files      RawConfigFiles                    `yaml:"files"`
 	Registries map[string]map[string]interface{} `yaml:"registries"`
 	Policies   map[string]RawConfigPolicy        `yaml:"policies"`
+	Augmenters []map[string]interface{}          `yaml:"augmenters"`
 	Git        RawConfigGit                      `yaml:"git"`
 }
 
@@ -106,6 +111,7 @@ type Config struct {
 	Files      ConfigFiles
 	Registries map[string]Registry
 	Policies   map[string]Policy
+	Augmenters []Augmenter
 	Git        Git
 }
 
@@ -267,6 +273,26 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 		}
 	}
 
+	augmenters := []Augmenter{}
+	for ai, a := range config.Augmenters {
+		t, ok := (a["type"]).(string)
+		if !ok {
+			return nil, fmt.Errorf("augmenter %d is missing type", ai)
+		}
+		if t == "gitHub" {
+			ra := RawConfigAugmenterGithub{}
+			err := decode(a, &ra)
+			if err != nil {
+				return nil, fmt.Errorf("augmenter %d is invalid: %w", ai, err)
+			}
+			augmenters = append(augmenters, GithubAugmenter{
+				AccessToken: ra.AccessToken,
+			})
+		} else {
+			return nil, fmt.Errorf("augmenter %d has invalid type %s", ai, t)
+		}
+	}
+
 	git := Git{}
 	authorSignKey := (*openpgp.Entity)(nil)
 	if config.Git.SignKey != "" {
@@ -313,6 +339,7 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 		},
 		Registries: registries,
 		Policies:   policies,
+		Augmenters: augmenters,
 		Git:        git,
 	}, nil
 }

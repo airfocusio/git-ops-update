@@ -46,6 +46,9 @@ policies:
       pinMinor: true
       pinPatch: true
       allowPrereleases: true
+augmenters:
+- type: gitHub
+  accessToken: access_token
 git:
   author:
     name: name

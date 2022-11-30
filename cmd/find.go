@@ -82,7 +82,7 @@ var (
 						err := internal.ApplyUpdate(dir, *config, cacheProvider, *r.Action, *r.Change)
 						if err != nil {
 							errorCount += 1
-							internal.LogError("%v", r.Error)
+							internal.LogError("%v", err)
 						} else {
 							internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
 						}

@@ -24,9 +24,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
 	github.com/fatih/color v1.13.0
 	github.com/go-git/go-billy/v5 v5.3.1
-	github.com/iancoleman/strcase v0.2.0
 	github.com/xanzy/go-gitlab v0.76.0
-	golang.org/x/text v0.4.0
 )
 
 require (

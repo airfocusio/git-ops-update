@@ -32,7 +32,3 @@ func (p LocalGitProvider) Request(dir string, changes Changes, callbacks ...func
 	}
 	return runCallbacks(callbacks)
 }
-
-func (p LocalGitProvider) AlreadyRequested(dir string, changes Changes) bool {
-	return false
-}
