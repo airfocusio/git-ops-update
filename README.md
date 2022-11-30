@@ -117,10 +117,11 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - uses: docker://ghcr.io/airfocusio/git-ops-update
+    - uses: airfocusio/git-ops-update/setup@main
+    - run: git-ops-update
 ```
 
 ## Installation
