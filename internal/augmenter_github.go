@@ -55,8 +55,6 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 		base := oldGithubCommitMatch[1]
 		head := newGithubCommitMatch[1]
 
-		result := fmt.Sprintf("https://github.com/%s/%s/compare/%s...%s", owner, repo, base, head) + "\n\n"
-
 		ctx := context.Background()
 		client := github.NewClient(&http.Client{})
 		if a.AccessToken != "" {
@@ -68,42 +66,92 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 			PerPage: 100,
 		})
 		defer res.Body.Close()
+
+		result := GithubLink{
+			Title: "Compare",
+			URL:   fmt.Sprintf("https://github.com/%s/%s/compare/%s...%s", owner, repo, base, head),
+		}.Render() + "\n"
 		if err == nil && comparison != nil {
+			pullRequests := []GithubLink{}
+			commits := []GithubLink{}
 			for _, commit := range comparison.Commits {
 				if commit.Commit != nil && commit.HTMLURL != nil {
-					title := "???"
 					if commit.Commit.Message != nil {
-						message, prs := a.ExtractPullRequestLinks(owner, repo, *commit.Commit.Message)
-						tmp := strings.Trim(strings.Split(message, "\n")[0], " ")
-						if tmp != "" {
-							title = tmp
+						message, pullRequestNumbers := a.ExtractPullRequestNumbers(*commit.Commit.Message)
+						for _, pullRequestNumber := range pullRequestNumbers {
+							pullRequest, res, err := client.PullRequests.Get(ctx, owner, repo, pullRequestNumber)
+							defer res.Body.Close()
+							if err == nil {
+								pullRequests = append(pullRequests, GithubLink{
+									Title: *pullRequest.Title,
+									URL:   *pullRequest.HTMLURL,
+								})
+							} else {
+								pullRequests = append(pullRequests, GithubLink{
+									Title: "???",
+									URL:   fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, pullRequestNumber),
+								})
+							}
 						}
-						title = strings.Trim(title+" "+strings.Join(prs, " "), " ")
+						title := strings.Trim(strings.Split(message, "\n")[0], " ")
+						if title != "" {
+							commits = append(commits, GithubLink{
+								Title: title,
+								URL:   *commit.HTMLURL,
+							})
+						}
 					}
-					result = result + fmt.Sprintf("* %s %s", title, *commit.HTMLURL) + "\n"
+				}
+			}
+			if len(pullRequests) > 0 {
+				result = result + "\nPull requests\n\n"
+				for _, pr := range pullRequests {
+					result = result + fmt.Sprintf("* %s", pr.Render()) + "\n"
+				}
+			}
+			if len(commits) > 0 {
+				result = result + "\nCommits\n\n"
+				for _, c := range commits {
+					result = result + fmt.Sprintf("* %s", c.Render()) + "\n"
 				}
 			}
 		}
-
-		return strings.Trim(result, "\n "), nil
+		result = result + "\n"
+		result = strings.Trim(result, "\n ")
+		return result, nil
 	} else if newGithubSourceMatch != nil && newGithubCommitMatch != nil {
 		owner := newGithubSourceMatch[1]
 		repo := newGithubSourceMatch[2]
 		head := newGithubCommitMatch[1]
-		return fmt.Sprintf("https://github.com/%s/%s/commit/%s", owner, repo, head), nil
+		return GithubLink{
+			Title: "Commit",
+			URL:   fmt.Sprintf("https://github.com/%s/%s/commit/%s", owner, repo, head),
+		}.Render(), nil
 	}
 
 	return "", nil
 }
 
-func (a GithubAugmenter) ExtractPullRequestLinks(owner string, repo string, text string) (string, []string) {
+func (a GithubAugmenter) ExtractPullRequestNumbers(text string) (string, []int) {
 	pullRequestNumberRegex := regexp.MustCompile(`\(?#(?P<number>\d+)\)?`)
-	pullRequestLinks := []string{}
+	pullRequestNumbers := []int{}
 	matches := pullRequestNumberRegex.FindAllStringSubmatch(text, 100)
 	for _, m := range matches {
 		if pullRequestNumber, err := strconv.Atoi(m[1]); err == nil {
-			pullRequestLinks = append(pullRequestLinks, fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, pullRequestNumber))
+			pullRequestNumbers = append(pullRequestNumbers, pullRequestNumber)
 		}
 	}
-	return trimRightMultilineString(pullRequestNumberRegex.ReplaceAllLiteralString(text, ""), " "), pullRequestLinks
+	return trimRightMultilineString(pullRequestNumberRegex.ReplaceAllLiteralString(text, ""), " "), pullRequestNumbers
+}
+
+type GithubLink struct {
+	Title string
+	URL   string
+}
+
+func (l GithubLink) Render() string {
+	if l.Title != "" {
+		return fmt.Sprintf("[%s](%s)", l.Title, l.URL)
+	}
+	return l.URL
 }
