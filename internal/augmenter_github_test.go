@@ -52,7 +52,9 @@ func TestGithubAugmenterRenderMessage(t *testing.T) {
 					"Commits\n"+
 					"\n"+
 					"* [add file1.txt](https://github.com/airfocusio/git-ops-update/commit/d71b2804a1c736d85e25d24739a2c5a67946b628)\n"+
-					"* [add file2.txt v0.0.2](https://github.com/airfocusio/git-ops-update/commit/7f4304f54fd1f89aecc15ec3e70975e5bacfeb68)",
+					"* [add file2.txt v0.0.2](https://github.com/airfocusio/git-ops-update/commit/7f4304f54fd1f89aecc15ec3e70975e5bacfeb68)\n"+
+					"\n"+
+					"/cc @choffmeister, @DizTortion",
 				m,
 			)
 		}
