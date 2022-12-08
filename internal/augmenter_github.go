@@ -71,17 +71,24 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 			Title: "Compare",
 			URL:   fmt.Sprintf("https://github.com/%s/%s/compare/%s...%s", owner, repo, base, head),
 		}.Render() + "\n"
+		mentions := []string{}
 		if err == nil && comparison != nil {
 			pullRequests := []GithubLink{}
 			commits := []GithubLink{}
 			for _, commit := range comparison.Commits {
+				if commit.Author != nil {
+					mentions = append(mentions, *commit.Author.Login)
+				}
 				if commit.Commit != nil && commit.HTMLURL != nil {
 					if commit.Commit.Message != nil {
 						message, pullRequestNumbers := a.ExtractPullRequestNumbers(*commit.Commit.Message)
 						for _, pullRequestNumber := range pullRequestNumbers {
 							pullRequest, res, err := client.PullRequests.Get(ctx, owner, repo, pullRequestNumber)
 							defer res.Body.Close()
-							if err == nil {
+							if pullRequest != nil && err == nil {
+								if pullRequest.User != nil {
+									mentions = append(mentions, *pullRequest.User.Login)
+								}
 								pullRequests = append(pullRequests, GithubLink{
 									Title: *pullRequest.Title,
 									URL:   *pullRequest.HTMLURL,
@@ -117,6 +124,13 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 			}
 		}
 		result = result + "\n"
+		mentions = sliceUnique(mentions)
+		if len(mentions) > 0 {
+			result = result + "/cc " + strings.Join(sliceMap(mentions, func(mention string) string {
+				return "@" + mention
+			}), ", ")
+			result = result + "\n"
+		}
 		result = strings.Trim(result, "\n ")
 		return result, nil
 	} else if newGithubSourceMatch != nil && newGithubCommitMatch != nil {

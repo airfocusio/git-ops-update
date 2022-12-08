@@ -71,3 +71,23 @@ func trimRightMultilineString(str string, cutset string) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+func sliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
+	result := []E2{}
+	for _, e := range slice {
+		result = append(result, mapFn(e))
+	}
+	return result
+}
+
+func sliceUnique[E comparable](slice []E) []E {
+	values := map[E]bool{}
+	result := []E{}
+	for _, e := range slice {
+		if _, v := values[e]; !v {
+			values[e] = true
+			result = append(result, e)
+		}
+	}
+	return result
+}
