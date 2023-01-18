@@ -10,7 +10,7 @@ runs:
     - if: inputs.version == 'latest'
       run: |
         cd /tmp
-        URL=$(curl -fsSL https://api.github.com/repos/airfocusio/git-ops-update/releases/${{ inputs.version }} | jq -r '.assets[] | select(.name|test("linux_amd64\\.tar\\.gz$")) | .browser_download_url')
+        URL=$(curl -fsSL https://api.github.com/repos/airfocusio/git-ops-update/releases/latest | jq -r '.assets[] | select(.name|test("linux_amd64\\.tar\\.gz$")) | .browser_download_url')
         curl -fsSL "$URL" | tar xz
         mv git-ops-update /usr/local/bin
         git-ops-update version
@@ -18,7 +18,8 @@ runs:
     - if: inputs.version != 'latest'
       run: |
         cd /tmp
-        URL=$(curl -fsSL https://api.github.com/repos/airfocusio/git-ops-update/releases/tags/${{ inputs.version }} | jq -r '.assets[] | select(.name|test("linux_amd64\\.tar\\.gz$")) | .browser_download_url')
+        VERSION="$(echo ${{ inputs.version }} | sed 's#^v##')"
+        URL="https://github.com/airfocusio/git-ops-update/releases/download/v${VERSION}/git-ops-update_${VERSION}_linux_amd64.tar.gz"
         curl -fsSL "$URL" | tar xz
         mv git-ops-update /usr/local/bin
         git-ops-update version
