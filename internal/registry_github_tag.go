@@ -55,6 +55,9 @@ func (r GitHubTagRegistry) FetchVersions(repository string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+		return nil, fmt.Errorf("request GET %s failed with status code %d", url, resp.StatusCode)
+	}
 
 	refs := []gitHubTagRegistryRef{}
 	err = json.Unmarshal(body, &refs)
