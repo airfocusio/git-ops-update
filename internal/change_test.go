@@ -7,27 +7,27 @@ import (
 )
 
 var c1 = Change{
-	RegistryName: "my-registry",
-	ResourceName: "my-resource",
-	OldVersion:   "1.0.0",
-	NewVersion:   "2.0.0",
-	OldValue:     "my-image:1.0.0",
-	NewValue:     "my-image:2.0.0",
-	File:         "folder/file.yaml",
-	LineNum:      3,
-	Comments:     "Line",
+	RegistryName:   "my-registry",
+	ResourceName:   "my-resource",
+	OldVersion:     "1.0.0",
+	NewVersion:     "2.0.0",
+	OldValue:       "my-image:1.0.0",
+	NewValue:       "my-image:2.0.0",
+	File:           "folder/file.yaml",
+	LineNum:        3,
+	RenderComments: func() string { return "Line" },
 }
 
 var c2 = Change{
-	RegistryName: "my-registry2",
-	ResourceName: "my-resource2",
-	OldVersion:   "3.0.0",
-	NewVersion:   "4.0.0",
-	OldValue:     "my-image2:3.0.0",
-	NewValue:     "my-image2:4.0.0",
-	File:         "folder/file2.yaml",
-	LineNum:      10,
-	Comments:     "Multi\nLine\n",
+	RegistryName:   "my-registry2",
+	ResourceName:   "my-resource2",
+	OldVersion:     "3.0.0",
+	NewVersion:     "4.0.0",
+	OldValue:       "my-image2:3.0.0",
+	NewValue:       "my-image2:4.0.0",
+	File:           "folder/file2.yaml",
+	LineNum:        10,
+	RenderComments: func() string { return "Multi\nLine\n" },
 }
 
 var c3 = Change{

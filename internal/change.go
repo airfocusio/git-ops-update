@@ -11,16 +11,16 @@ import (
 )
 
 type Change struct {
-	RegistryName string
-	ResourceName string
-	OldVersion   string
-	NewVersion   string
-	File         string
-	FileFormat   FileFormat
-	LineNum      int
-	OldValue     string
-	NewValue     string
-	Comments     string
+	RegistryName   string
+	ResourceName   string
+	OldVersion     string
+	NewVersion     string
+	File           string
+	FileFormat     FileFormat
+	LineNum        int
+	OldValue       string
+	NewValue       string
+	RenderComments func() string
 }
 
 type Changes []Change
@@ -84,7 +84,11 @@ func (cs Changes) Title() string {
 func (cs Changes) Message() string {
 	changeCommments := []string{}
 	for _, c := range cs {
-		changeCommments = append(changeCommments, strings.Trim(c.Message()+"\n"+c.Comments, "\n "))
+		renderedComments := ""
+		if c.RenderComments != nil {
+			renderedComments = c.RenderComments()
+		}
+		changeCommments = append(changeCommments, strings.Trim(c.Message()+"\n"+renderedComments, "\n "))
 	}
 	return strings.Join(changeCommments, "\n\n---\n\n")
 }
