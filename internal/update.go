@@ -25,6 +25,7 @@ func ApplyUpdate(dir string, config Config, cacheProvider CacheProvider, action 
 }
 
 func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []UpdateVersionResult {
+	cacheKey := os.Getenv("GIT_OPS_UPDATE_CACHE_KEY")
 	cache, err := cacheProvider.Load()
 	if err != nil {
 		LogWarning("Unable to read cache: %v", err)
@@ -76,8 +77,14 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 
 			var availableVersions []string
 			cachedResource := cache.FindResource(annotation.RegistryName, annotation.ResourceName)
-			if cachedResource == nil || cachedResource.Timestamp.Add(time.Duration((*annotation.Registry).GetInterval())).Before(time.Now()) {
-				LogDebug("Fetching new versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
+			if cachedResource != nil && cacheKey != "" && cachedResource.CacheKey == cacheKey {
+				LogDebug("Using cached versions for %s/%s (cache key hit)", annotation.RegistryName, annotation.ResourceName)
+				availableVersions = cachedResource.Versions
+			} else if cachedResource != nil && cachedResource.Timestamp.Add(time.Duration((*annotation.Registry).GetInterval())).After(time.Now()) {
+				LogDebug("Using cached versions for %s/%s (cache interval hit)", annotation.RegistryName, annotation.ResourceName)
+				availableVersions = cachedResource.Versions
+			} else {
+				LogDebug("Fetching new versions for %s/%s", annotation.RegistryName, annotation.ResourceName)
 				versions, err := (*annotation.Registry).FetchVersions(annotation.ResourceName)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
@@ -89,6 +96,7 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					ResourceName: annotation.ResourceName,
 					Versions:     availableVersions,
 					Timestamp:    time.Now(),
+					CacheKey:     cacheKey,
 				})
 				cache = &nextCache
 				err = cacheProvider.Save(*cache)
@@ -96,9 +104,6 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					errs = append(errs, fmt.Errorf("%s:%d: %w", fileRel, fileAnnotation.LineNum, err))
 					continue
 				}
-			} else {
-				LogDebug("Using cached versions for %s/%s ", annotation.RegistryName, annotation.ResourceName)
-				availableVersions = cachedResource.Versions
 			}
 
 			currentValue, err := fileFormat.ReadValue(lines, fileAnnotation.LineNum)

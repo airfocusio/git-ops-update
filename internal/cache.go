@@ -12,6 +12,7 @@ type CacheResource struct {
 	ResourceName string    `yaml:"resource"`
 	Versions     []string  `yaml:"versions"`
 	Timestamp    time.Time `yaml:"timestamp"`
+	CacheKey     string    `yaml:"cacheKey,omitempty"`
 }
 
 type Cache struct {
