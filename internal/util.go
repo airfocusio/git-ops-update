@@ -80,6 +80,14 @@ func sliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
 	return result
 }
 
+func sliceFlatMap[E any, E2 any](slice []E, mapFn func(e E) []E2) []E2 {
+	result := []E2{}
+	for _, e := range slice {
+		result = append(result, mapFn(e)...)
+	}
+	return result
+}
+
 func sliceUnique[E comparable](slice []E) []E {
 	values := map[E]bool{}
 	result := []E{}

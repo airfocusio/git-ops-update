@@ -75,7 +75,14 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to extract gitlab project id from remote origin: %w", err)
 	}
+	client, err := gitlab.NewOAuthClient(
+		p.AccessToken,
+		gitlab.WithBaseURL(p.URL))
+	if err != nil {
+		return fmt.Errorf("failed to connect to gitlab: %w", err)
+	}
 
+	existingBranches := []string{}
 	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
 	targetBranchGroupHash := changes.GroupHash()
 	targetBranchHash := changes.Hash()
@@ -85,19 +92,7 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchHash) {
 			targetBranchExists = true
 		} else if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchGroupHash) {
-			LogDebug("Removing branch %s from gitlab project %s", refName, *projectId)
-			err := remote.Push(&git.PushOptions{
-				Auth: &http.BasicAuth{
-					Username: "api",
-					Password: p.AccessToken,
-				},
-				RefSpecs: []config.RefSpec{
-					config.RefSpec(":" + refName),
-				},
-			})
-			if err != nil {
-				LogWarning("Unable to remove branch %s from gitlab project %s: %v", refName, *projectId, err)
-			}
+			existingBranches = append(existingBranches, refName)
 		}
 	}
 	if targetBranchExists {
@@ -130,12 +125,6 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	}
 
 	LogDebug("Creating pull request for branch %s to gitlab project %s", targetBranch.Short(), *projectId)
-	client, err := gitlab.NewOAuthClient(
-		p.AccessToken,
-		gitlab.WithBaseURL(p.URL))
-	if err != nil {
-		return fmt.Errorf("failed to connect to gitlab: %w", err)
-	}
 	pullBase := string(baseBranch.Name().Short())
 	pullHead := changes.Branch(branchPrefix)
 	pullTitle := changes.Title()
@@ -158,6 +147,22 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to create github pull request: %w", err)
 	}
 	defer res.Body.Close()
+
+	for _, refName := range existingBranches {
+		LogDebug("Removing branch %s from gitlab project %s", refName, *projectId)
+		err := remote.Push(&git.PushOptions{
+			Auth: &http.BasicAuth{
+				Username: "api",
+				Password: p.AccessToken,
+			},
+			RefSpecs: []config.RefSpec{
+				config.RefSpec(":" + refName),
+			},
+		})
+		if err != nil {
+			LogWarning("Unable to remove branch %s from gitlab project %s: %v", refName, *projectId, err)
+		}
+	}
 
 	err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
 	if err != nil {

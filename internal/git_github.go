@@ -75,7 +75,13 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to extract github owner/repository from remote origin: %w", err)
 	}
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
 
+	existingBranches := []string{}
+	existingPullRequests := []*github.PullRequest{}
 	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
 	targetBranchGroupHash := changes.GroupHash()
 	targetBranchHash := changes.Hash()
@@ -85,19 +91,16 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchHash) {
 			targetBranchExists = true
 		} else if strings.HasPrefix(refName, targetBranchFindPrefix) && strings.Contains(refName, targetBranchGroupHash) {
-			LogDebug("Removing branch %s from github repository %s/%s", refName, *ownerName, *repoName)
-			err := remote.Push(&git.PushOptions{
-				Auth: &http.BasicAuth{
-					Username: "api",
-					Password: p.AccessToken,
-				},
-				RefSpecs: []config.RefSpec{
-					config.RefSpec(":" + refName),
-				},
+			existingBranches = append(existingBranches, refName)
+			pullRequests, res, err := client.PullRequests.List(context.Background(), *ownerName, *repoName, &github.PullRequestListOptions{
+				State: "open",
+				Head:  fmt.Sprintf("%s:%s", *ownerName, strings.TrimPrefix(refName, "refs/heads/")),
 			})
 			if err != nil {
-				LogWarning("Unable to remove branch %s from github repository %s/%s: %v", refName, *ownerName, *repoName, err)
+				LogWarning("Unable to search pull request for branch %s from github repository %s/%s: %v", refName, *ownerName, *repoName, err)
 			}
+			defer res.Body.Close()
+			existingPullRequests = append(existingPullRequests, pullRequests...)
 		}
 	}
 	if targetBranchExists {
@@ -131,29 +134,67 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	}
 
 	LogDebug("Creating pull request for branch %s to github repository %s/%s", targetBranch.Short(), *ownerName, *repoName)
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: p.AccessToken})
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-	pullBase := string(baseBranch.Name())
-	pullHead := string(targetBranch)
-	pullTitle := changes.Title()
-	pullBody := fullMessage
-	_, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
-		Title: &pullTitle,
-		Base:  &pullBase,
-		Head:  &pullHead,
-		Body:  &pullBody,
+	pullRequestBase := string(baseBranch.Name())
+	pullRequestHead := string(targetBranch)
+	pullRequestTitle := changes.Title()
+	pullRequestBody := fullMessage
+	pullRequest, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
+		Title: &pullRequestTitle,
+		Base:  &pullRequestBase,
+		Head:  &pullRequestHead,
+		Body:  &pullRequestBody,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create github pull request: %w", err)
 	}
 	defer res.Body.Close()
+	existingPullRequestLabels := sliceUnique(sliceFlatMap(existingPullRequests, func(pr *github.PullRequest) []string {
+		return sliceMap(pr.Labels, func(l *github.Label) string {
+			return *l.Name
+		})
+	}))
+	if len(existingPullRequestLabels) > 0 {
+		LogDebug("Adding labels for pull request %d to github repository %s/%s", *pullRequest.Number, *ownerName, *repoName)
+		_, res, err = client.Issues.AddLabelsToIssue(context.Background(), *ownerName, *repoName, *pullRequest.Number, existingPullRequestLabels)
+		if err != nil {
+			return fmt.Errorf("unable to add github pull request labels: %w", err)
+		}
+		defer res.Body.Close()
+	}
+
+	for _, existingPullRequest := range existingPullRequests {
+		LogDebug("Commenting on superseded pull request %d to github repository %s/%s", *existingPullRequest.Number, *ownerName, *repoName)
+		closeMessage := fmt.Sprintf("Superseded by #%d", *pullRequest.Number)
+		_, res, err = client.Issues.CreateComment(context.Background(), *ownerName, *repoName, *existingPullRequest.Number, &github.IssueComment{
+			Body: &closeMessage,
+		})
+		if err != nil {
+			return fmt.Errorf("unable to add github pull request comment: %w", err)
+		}
+		defer res.Body.Close()
+	}
+
+	for _, refName := range existingBranches {
+		LogDebug("Removing branch %s from github repository %s/%s", refName, *ownerName, *repoName)
+		err = remote.Push(&git.PushOptions{
+			Auth: &http.BasicAuth{
+				Username: "api",
+				Password: p.AccessToken,
+			},
+			RefSpecs: []config.RefSpec{
+				config.RefSpec(":" + refName),
+			},
+		})
+		if err != nil {
+			LogWarning("Unable to remove branch %s from github repository %s/%s: %v", refName, *ownerName, *repoName, err)
+		}
+	}
 
 	err = worktree.Checkout(&git.CheckoutOptions{Branch: baseBranch.Name()})
 	if err != nil {
 		return fmt.Errorf("unable to checkout to base branch: %w", err)
 	}
+
 	return nil
 }
 
