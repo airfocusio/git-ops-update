@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -17,9 +18,16 @@ import (
 
 var _ GitProvider = (*GitHubGitProvider)(nil)
 
+type GitHubGitProviderInheritLabels struct {
+	Enabled  bool
+	Includes []string
+	Excludes []string
+}
+
 type GitHubGitProvider struct {
-	Author      GitAuthor
-	AccessToken string
+	Author        GitAuthor
+	AccessToken   string
+	InheritLabels GitHubGitProviderInheritLabels
 }
 
 func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
@@ -148,14 +156,11 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to create github pull request: %w", err)
 	}
 	defer res.Body.Close()
-	existingPullRequestLabels := sliceUnique(sliceFlatMap(existingPullRequests, func(pr *github.PullRequest) []string {
-		return sliceMap(pr.Labels, func(l *github.Label) string {
-			return *l.Name
-		})
-	}))
-	if len(existingPullRequestLabels) > 0 {
+
+	inheritedLabels := p.ExtractInheritedLabels(existingPullRequests)
+	if len(inheritedLabels) > 0 {
 		LogDebug("Adding labels for pull request %d to github repository %s/%s", *pullRequest.Number, *ownerName, *repoName)
-		_, res, err = client.Issues.AddLabelsToIssue(context.Background(), *ownerName, *repoName, *pullRequest.Number, existingPullRequestLabels)
+		_, res, err = client.Issues.AddLabelsToIssue(context.Background(), *ownerName, *repoName, *pullRequest.Number, inheritedLabels)
 		if err != nil {
 			return fmt.Errorf("unable to add github pull request labels: %w", err)
 		}
@@ -164,9 +169,9 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 
 	for _, existingPullRequest := range existingPullRequests {
 		LogDebug("Commenting on superseded pull request %d to github repository %s/%s", *existingPullRequest.Number, *ownerName, *repoName)
-		closeMessage := fmt.Sprintf("Superseded by #%d", *pullRequest.Number)
+		body := fmt.Sprintf("Superseded by #%d", *pullRequest.Number)
 		_, res, err = client.Issues.CreateComment(context.Background(), *ownerName, *repoName, *existingPullRequest.Number, &github.IssueComment{
-			Body: &closeMessage,
+			Body: &body,
 		})
 		if err != nil {
 			return fmt.Errorf("unable to add github pull request comment: %w", err)
@@ -196,6 +201,44 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	}
 
 	return nil
+}
+
+func (p *GitHubGitProvider) ExtractInheritedLabels(pullRequests []*github.PullRequest) []string {
+	result := []string{}
+	if p.InheritLabels.Enabled {
+		allLabels := sliceUnique(sliceFlatMap(pullRequests, func(pr *github.PullRequest) []string {
+			return sliceMap(pr.Labels, func(l *github.Label) string {
+				return *l.Name
+			})
+		}))
+		for _, label := range allLabels {
+			included := true
+			excluded := false
+			if len(p.InheritLabels.Includes) > 0 {
+				included = false
+				for _, pattern := range p.InheritLabels.Includes {
+					matches, err := filepath.Match(pattern, label)
+					if err == nil && matches {
+						included = true
+						break
+					}
+				}
+			}
+			if len(p.InheritLabels.Excludes) > 0 {
+				for _, pattern := range p.InheritLabels.Excludes {
+					matches, err := filepath.Match(pattern, label)
+					if err == nil && matches {
+						excluded = true
+						break
+					}
+				}
+			}
+			if included && !excluded {
+				result = append(result, label)
+			}
+		}
+	}
+	return result
 }
 
 func extractGitHubOwnerRepoFromRemote(remote git.Remote) (*string, *string, error) {

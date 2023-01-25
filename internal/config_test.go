@@ -98,6 +98,11 @@ func TestLoadConfig(t *testing.T) {
 					Email: "email",
 				},
 				AccessToken: "access_token",
+				InheritLabels: GitHubGitProviderInheritLabels{
+					Enabled:  true,
+					Includes: []string{"note-*"},
+					Excludes: []string{"do-not-merge"},
+				},
 			},
 		},
 	}

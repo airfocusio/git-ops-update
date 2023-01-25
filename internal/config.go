@@ -70,10 +70,17 @@ type RawConfigAugmenterGithub struct {
 	AccessToken string `yaml:"accessToken"`
 }
 
+type RawConfigGitGitHubInheritLabels struct {
+	Enabled  bool     `yaml:"enabled"`
+	Includes []string `yaml:"includes"`
+	Excludes []string `yaml:"excludes"`
+}
+
 type RawConfigGitGitHub struct {
-	Owner       string `yaml:"owner"`
-	Repo        string `yaml:"repo"`
-	AccessToken string `yaml:"accessToken"`
+	Owner         string                          `yaml:"owner"`
+	Repo          string                          `yaml:"repo"`
+	AccessToken   string                          `yaml:"accessToken"`
+	InheritLabels RawConfigGitGitHubInheritLabels `yaml:"inheritLabels"`
 }
 
 type RawConfigGitGitLab struct {
@@ -318,6 +325,11 @@ func LoadConfig(bytesRaw []byte) (*Config, error) {
 		git.Provider = GitHubGitProvider{
 			Author:      author,
 			AccessToken: config.Git.GitHub.AccessToken,
+			InheritLabels: GitHubGitProviderInheritLabels{
+				Enabled:  config.Git.GitHub.InheritLabels.Enabled,
+				Includes: config.Git.GitHub.InheritLabels.Includes,
+				Excludes: config.Git.GitHub.InheritLabels.Excludes,
+			},
 		}
 	} else if config.Git.GitLab != nil {
 		git.Provider = GitLabGitProvider{

@@ -80,6 +80,16 @@ func sliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
 	return result
 }
 
+func sliceFilter[E any](slice []E, filterFn func(e E) bool) []E {
+	result := []E{}
+	for _, e := range slice {
+		if filterFn(e) {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
 func sliceFlatMap[E any, E2 any](slice []E, mapFn func(e E) []E2) []E2 {
 	result := []E2{}
 	for _, e := range slice {

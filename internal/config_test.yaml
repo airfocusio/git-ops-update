@@ -55,3 +55,9 @@ git:
     email: email
   gitHub:
     accessToken: access_token
+    inheritLabels:
+      enabled: true
+      includes:
+      - note-*
+      excludes:
+      - do-not-merge
