@@ -20,7 +20,7 @@ type Change struct {
 	LineNum        int
 	OldValue       string
 	NewValue       string
-	RenderComments func() string
+	RenderComments func() (string, string)
 }
 
 type Changes []Change
@@ -81,16 +81,19 @@ func (cs Changes) Title() string {
 	return result
 }
 
-func (cs Changes) Message() string {
-	changeCommments := []string{}
+func (cs Changes) Message() (string, string) {
+	changeComments := []string{}
+	changeFooters := []string{}
 	for _, c := range cs {
-		renderedComments := ""
+		renderedComment := ""
+		renderedFooter := ""
 		if c.RenderComments != nil {
-			renderedComments = c.RenderComments()
+			renderedComment, renderedFooter = c.RenderComments()
 		}
-		changeCommments = append(changeCommments, strings.Trim(c.Message()+"\n"+renderedComments, "\n "))
+		changeComments = append(changeComments, strings.Trim(c.Message()+"\n"+renderedComment, "\n "))
+		changeFooters = append(changeFooters, strings.Trim(renderedFooter, "\n "))
 	}
-	return strings.Join(changeCommments, "\n\n---\n\n")
+	return strings.Join(changeComments, "\n\n---\n\n"), strings.Trim(strings.Join(changeComments, "\n\n---\n\n")+"\n\n"+strings.Join(changeFooters, "\n"), "\n ")
 }
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {

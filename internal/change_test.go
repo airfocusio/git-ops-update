@@ -15,7 +15,7 @@ var c1 = Change{
 	NewValue:       "my-image:2.0.0",
 	File:           "folder/file.yaml",
 	LineNum:        3,
-	RenderComments: func() string { return "Line" },
+	RenderComments: func() (string, string) { return "Line", "Footer1" },
 }
 
 var c2 = Change{
@@ -27,7 +27,7 @@ var c2 = Change{
 	NewValue:       "my-image2:4.0.0",
 	File:           "folder/file2.yaml",
 	LineNum:        10,
-	RenderComments: func() string { return "Multi\nLine\n" },
+	RenderComments: func() (string, string) { return "Multi\nLine", "Footer2" },
 }
 
 var c3 = Change{
@@ -59,10 +59,17 @@ func TestChangesTitle(t *testing.T) {
 }
 
 func TestChangesMessage(t *testing.T) {
-	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine", Changes{c1}.Message())
-	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine", Changes{c1, c2}.Message())
+	m1, m1Full := Changes{c1}.Message()
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine", m1)
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\nFooter1", m1Full)
 
-	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", Changes{c3}.Message())
+	m2, m2Full := Changes{c1, c2}.Message()
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine", m2)
+	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine\n\nFooter1\nFooter2", m2Full)
+
+	m3, m3Full := Changes{c3}.Message()
+	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", m3)
+	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", m3Full)
 }
 
 func TestChangesBranch(t *testing.T) {

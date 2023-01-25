@@ -18,23 +18,23 @@ type GithubAugmenter struct {
 	AccessToken string
 }
 
-func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, error) {
+func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, string, error) {
 	registry, ok := config.Registries[change.RegistryName]
 	if !ok {
-		return "", nil
+		return "", "", nil
 	}
 	dockerRegistry, ok := registry.(DockerRegistry)
 	if !ok {
-		return "", nil
+		return "", "", nil
 	}
 
 	oldLabels, err := dockerRegistry.RetrieveLabels(change.ResourceName, change.OldVersion)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	newLabels, err := dockerRegistry.RetrieveLabels(change.ResourceName, change.NewVersion)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	oldSource := oldLabels["org.opencontainers.image.source"]
@@ -67,7 +67,7 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 		})
 		defer res.Body.Close()
 
-		result := GithubLink{
+		result1 := GithubLink{
 			Title: "Compare",
 			URL:   fmt.Sprintf("https://github.com/%s/%s/compare/%s...%s", owner, repo, base, head),
 		}.Render() + "\n"
@@ -111,28 +111,32 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 				}
 			}
 			if len(pullRequests) > 0 {
-				result = result + "\nPull requests\n\n"
+				result1 = result1 + "\nPull requests\n\n"
 				for _, pr := range pullRequests {
-					result = result + fmt.Sprintf("* %s", pr.Render()) + "\n"
+					result1 = result1 + fmt.Sprintf("* %s", pr.Render()) + "\n"
 				}
 			}
 			if len(commits) > 0 {
-				result = result + "\nCommits\n\n"
+				result1 = result1 + "\nCommits\n\n"
 				for _, c := range commits {
-					result = result + fmt.Sprintf("* %s", c.Render()) + "\n"
+					result1 = result1 + fmt.Sprintf("* %s", c.Render()) + "\n"
 				}
 			}
 		}
-		result = result + "\n"
+		result1 = result1 + "\n"
+		result1 = strings.Trim(result1, "\n ")
+
+		result2 := ""
 		mentions = sliceUnique(mentions)
 		if len(mentions) > 0 {
-			result = result + "/cc " + strings.Join(sliceMap(mentions, func(mention string) string {
+			result2 = result2 + "/cc " + strings.Join(sliceMap(mentions, func(mention string) string {
 				return "@" + mention
 			}), ", ")
-			result = result + "\n"
+			result2 = result2 + "\n"
 		}
-		result = strings.Trim(result, "\n ")
-		return result, nil
+		result2 = strings.Trim(result2, "\n ")
+
+		return result1, result2, nil
 	} else if newGithubSourceMatch != nil && newGithubCommitMatch != nil {
 		owner := newGithubSourceMatch[1]
 		repo := newGithubSourceMatch[2]
@@ -140,10 +144,10 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, er
 		return GithubLink{
 			Title: "Commit",
 			URL:   fmt.Sprintf("https://github.com/%s/%s/commit/%s", owner, repo, head),
-		}.Render(), nil
+		}.Render(), "", nil
 	}
 
-	return "", nil
+	return "", "", nil
 }
 
 func (a GithubAugmenter) ExtractPullRequestNumbers(text string) (string, []int) {

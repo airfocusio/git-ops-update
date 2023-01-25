@@ -32,7 +32,8 @@ func (p GitLabGitProvider) Push(dir string, changes Changes, callbacks ...func()
 		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+changes.Message(), p.Author, callbacks...)
+	message, _ := changes.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -113,7 +114,8 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to create target branch: %w", err)
 	}
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+changes.Message(), p.Author, callbacks...)
+	message, fullMessage := changes.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -137,7 +139,7 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	pullBase := string(baseBranch.Name().Short())
 	pullHead := changes.Branch(branchPrefix)
 	pullTitle := changes.Title()
-	pullBody := changes.Message()
+	pullBody := fullMessage
 	removeSourceBranch := true
 	_, res, err := client.MergeRequests.CreateMergeRequest(*projectId, &gitlab.CreateMergeRequestOptions{
 		Title:              &pullTitle,

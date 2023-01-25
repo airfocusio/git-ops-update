@@ -139,19 +139,23 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
 				}
-				change.RenderComments = func() string {
+				change.RenderComments = func() (string, string) {
 					augmenterMessages := []string{}
+					augmenterFooters := []string{}
 					for _, a := range config.Augmenters {
-						augmenterMessage, err := a.RenderMessage(config, change)
+						augmenterMessage, augmenterFooter, err := a.RenderMessage(config, change)
 						if err == nil {
 							if augmenterMessage != "" {
 								augmenterMessages = append(augmenterMessages, augmenterMessage)
+							}
+							if augmenterFooter != "" {
+								augmenterFooters = append(augmenterFooters, augmenterFooter)
 							}
 						} else {
 							LogWarning("Unable to augment: %v", err)
 						}
 					}
-					return strings.Join(augmenterMessages, "\n\n")
+					return strings.Join(augmenterMessages, "\n\n"), strings.Join(augmenterFooters, "\n")
 				}
 				result = append(result, UpdateVersionResult{Change: &change, Action: annotation.Action})
 			}
