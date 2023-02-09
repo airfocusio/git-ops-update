@@ -15,18 +15,18 @@ func warnLocalGitProvider() {
 	}
 }
 
-func (p LocalGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
+func (p LocalGitProvider) Push(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	warnLocalGitProvider()
-	err := changes.Push(dir)
+	err := changeSet.Push(dir)
 	if err != nil {
 		return err
 	}
 	return runCallbacks(callbacks)
 }
 
-func (p LocalGitProvider) Request(dir string, changes Changes, callbacks ...func() error) error {
+func (p LocalGitProvider) Request(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	warnLocalGitProvider()
-	err := p.Push(dir, changes)
+	err := p.Push(dir, changeSet)
 	if err != nil {
 		return err
 	}

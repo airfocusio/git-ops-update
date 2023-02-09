@@ -8,59 +8,63 @@ import (
 
 type Action interface {
 	Identifier() string
-	Apply(dir string, changes Changes) error
+	Apply(dir string, changeSet ChangeSet) error
 }
 
 var _ Action = (*PushAction)(nil)
 
 type PushAction struct {
-	git  GitProvider
-	exec []string
+	git GitProvider
 }
 
 func (c PushAction) Identifier() string {
 	return "push"
 }
 
-func (a PushAction) Apply(dir string, changes Changes) error {
-	return a.git.Push(dir, changes, execCallbacks(dir, a.exec)...)
+func (a PushAction) Apply(dir string, changeSet ChangeSet) error {
+	execCallbacks := SliceMap(changeSet.Changes, func(c Change) func() error {
+		return execCallback(dir, c.Exec)
+	})
+	return a.git.Push(dir, changeSet, execCallbacks...)
 }
 
 var _ Action = (*RequestAction)(nil)
 
 type RequestAction struct {
-	git  GitProvider
-	exec []string
+	git GitProvider
 }
 
 func (c RequestAction) Identifier() string {
 	return "request"
 }
 
-func (a RequestAction) Apply(dir string, changes Changes) error {
-	return a.git.Request(dir, changes, execCallbacks(dir, a.exec)...)
+func (a RequestAction) Apply(dir string, changeSet ChangeSet) error {
+	execCallbacks := SliceMap(changeSet.Changes, func(c Change) func() error {
+		return execCallback(dir, c.Exec)
+	})
+	return a.git.Request(dir, changeSet, execCallbacks...)
 }
 
-func getAction(p GitProvider, actionName string, exec []string) (*Action, error) {
+func getAction(p GitProvider, actionName string) (*Action, error) {
 	switch actionName {
 	case "":
 		return nil, nil
 	case "push":
-		result := Action(PushAction{git: p, exec: exec})
+		result := Action(PushAction{git: p})
 		return &result, nil
 	case "request":
-		result := Action(RequestAction{git: p, exec: exec})
+		result := Action(RequestAction{git: p})
 		return &result, nil
 	default:
 		return nil, fmt.Errorf("unknown action %s", actionName)
 	}
 }
 
-func execCallbacks(dir string, execCmdAndArgs []string) []func() error {
+func execCallback(dir string, execCmdAndArgs []string) func() error {
 	if len(execCmdAndArgs) == 0 {
-		return []func() error{}
+		return func() error { return nil }
 	}
-	return []func() error{func() error {
+	return func() error {
 		name := execCmdAndArgs[0]
 		args := execCmdAndArgs[1:]
 		LogDebug("Executing %s with args [%s]", name, strings.Join(args, ", "))
@@ -76,5 +80,5 @@ func execCallbacks(dir string, execCmdAndArgs []string) []func() error {
 			return fmt.Errorf("executing %s failed: %w%s", name, err, str)
 		}
 		return nil
-	}}
+	}
 }

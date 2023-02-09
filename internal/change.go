@@ -20,16 +20,21 @@ type Change struct {
 	LineNum        int
 	OldValue       string
 	NewValue       string
+	Exec           []string
+	Group          string
 	RenderComments func() (string, string)
 }
 
-type Changes []Change
+type ChangeSet struct {
+	Group   string
+	Changes []Change
+}
 
 const gitHubMaxPullRequestTitleLength = 256
 
-func (cs Changes) GroupHash() string {
+func (cs ChangeSet) GroupHash() string {
 	temp := []byte{}
-	for _, c := range cs {
+	for _, c := range cs.Changes {
 		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d", c.File, c.LineNum)))
 		temp = append(temp, cHash[:]...)
 	}
@@ -37,9 +42,9 @@ func (cs Changes) GroupHash() string {
 	return capString(hex.EncodeToString(hash[:]), 16)
 }
 
-func (cs Changes) Hash() string {
+func (cs ChangeSet) Hash() string {
 	temp := []byte{}
-	for _, c := range cs {
+	for _, c := range cs.Changes {
 		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d#%s", c.File, c.LineNum, c.NewValue)))
 		temp = append(temp, cHash[:]...)
 	}
@@ -47,9 +52,9 @@ func (cs Changes) Hash() string {
 	return capString(hex.EncodeToString(hash[:]), 16)
 }
 
-func (cs Changes) Branch(prefix string) string {
+func (cs ChangeSet) Branch(prefix string) string {
 	updates := []string{}
-	for _, change := range cs {
+	for _, change := range cs.Changes {
 		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
 	}
 
@@ -61,7 +66,7 @@ func (cs Changes) Branch(prefix string) string {
 		cs.Hash())
 }
 
-func (cs Changes) BranchFindPrefix(prefix string) string {
+func (cs ChangeSet) BranchFindPrefix(prefix string) string {
 	return prefix
 }
 
@@ -69,9 +74,9 @@ func (c Change) Message() string {
 	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.LineNum, c.OldValue, c.NewValue)
 }
 
-func (cs Changes) Title() string {
+func (cs ChangeSet) Title() string {
 	updates := []string{}
-	for _, change := range cs {
+	for _, change := range cs.Changes {
 		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
 	}
 	result := fmt.Sprintf("Update %s", strings.Join(updates, ", "))
@@ -81,10 +86,10 @@ func (cs Changes) Title() string {
 	return result
 }
 
-func (cs Changes) Message() (string, string) {
+func (cs ChangeSet) Message() (string, string) {
 	changeComments := []string{}
 	changeFooters := []string{}
-	for _, c := range cs {
+	for _, c := range cs.Changes {
 		renderedComment := ""
 		renderedFooter := ""
 		if c.RenderComments != nil {
@@ -122,8 +127,8 @@ func (c Change) Push(dir string, fileHooks ...func(file string) error) error {
 	return nil
 }
 
-func (cs Changes) Push(dir string, fileHooks ...func(file string) error) error {
-	for _, c := range cs {
+func (cs ChangeSet) Push(dir string, fileHooks ...func(file string) error) error {
+	for _, c := range cs.Changes {
 		err := c.Push(dir, fileHooks...)
 		if err != nil {
 			return err

@@ -16,10 +16,18 @@ type UpdateVersionResult struct {
 	Action *Action
 }
 
-func ApplyUpdate(dir string, config Config, cacheProvider CacheProvider, action Action, change Change) error {
-	changes := Changes{change}
-	if err := action.Apply(dir, changes); err != nil {
-		return fmt.Errorf("%s:%d: %w", change.File, change.LineNum, err)
+func ApplyUpdate(dir string, config Config, cacheProvider CacheProvider, action Action, changeSet ChangeSet) error {
+	if len(changeSet.Changes) == 0 {
+		return fmt.Errorf("changeset must not be empty")
+	}
+	if err := action.Apply(dir, changeSet); err != nil {
+		if changeSet.Group == "" {
+			return fmt.Errorf("%s: %w", changeSet.Group, err)
+		}
+		locations := SliceMap(changeSet.Changes, func(c Change) string {
+			return fmt.Sprintf("%s:%d", c.File, c.LineNum)
+		})
+		return fmt.Errorf("%s: %w", strings.Join(locations, "|"), err)
 	}
 	return nil
 }
@@ -138,6 +146,8 @@ func DetectUpdates(dir string, config Config, cacheProvider CacheProvider) []Upd
 					LineNum:      fileAnnotation.LineNum,
 					OldValue:     currentValue,
 					NewValue:     *nextValue,
+					Exec:         annotation.Exec,
+					Group:        annotation.Group,
 				}
 				change.RenderComments = func() (string, string) {
 					augmenterMessages := []string{}
@@ -182,6 +192,7 @@ type annotation struct {
 	Suffix       string                 `json:"suffix"`
 	Filter       map[string]interface{} `json:"filter"`
 	Exec         []string               `json:"exec"`
+	Group        string                 `json:"group"`
 }
 
 func parseAnnotation(annotationStrFull string, config Config) (*annotation, error) {
@@ -226,7 +237,7 @@ func parseAnnotation(annotationStrFull string, config Config) (*annotation, erro
 	}
 	annotation.Format = format
 
-	action, err := getAction(config.Git.Provider, annotation.ActionName, annotation.Exec)
+	action, err := getAction(config.Git.Provider, annotation.ActionName)
 	if err != nil {
 		return nil, err
 	}

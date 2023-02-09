@@ -16,8 +16,8 @@ type Git struct {
 }
 
 type GitProvider interface {
-	Push(dir string, changes Changes, callbacks ...func() error) error
-	Request(dir string, changes Changes, callbacks ...func() error) error
+	Push(dir string, changeSet ChangeSet, callbacks ...func() error) error
+	Request(dir string, changeSet ChangeSet, callbacks ...func() error) error
 }
 
 type GitAuthor struct {
@@ -28,8 +28,8 @@ type GitAuthor struct {
 
 const branchPrefix = "git-ops-update"
 
-func applyChangesAsCommit(worktree git.Worktree, dir string, changes Changes, message string, author GitAuthor, callbacks ...func() error) (*plumbing.Hash, error) {
-	err := changes.Push(dir)
+func applyChangesAsCommit(worktree git.Worktree, dir string, changeSet ChangeSet, message string, author GitAuthor, callbacks ...func() error) (*plumbing.Hash, error) {
+	err := changeSet.Push(dir)
 	if err != nil {
 		return nil, err
 	}

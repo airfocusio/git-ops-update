@@ -22,7 +22,7 @@ type GitLabGitProvider struct {
 	AssigneeIDs []int
 }
 
-func (p GitLabGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitLabGitProvider) Push(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -32,8 +32,8 @@ func (p GitLabGitProvider) Push(dir string, changes Changes, callbacks ...func()
 		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
-	message, _ := changes.Message()
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
+	message, _ := changeSet.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changeSet, changeSet.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -49,7 +49,7 @@ func (p GitLabGitProvider) Push(dir string, changes Changes, callbacks ...func()
 	return nil
 }
 
-func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitLabGitProvider) Request(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -83,9 +83,9 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	}
 
 	existingBranches := []string{}
-	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
-	targetBranchGroupHash := changes.GroupHash()
-	targetBranchHash := changes.Hash()
+	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changeSet.BranchFindPrefix(branchPrefix))
+	targetBranchGroupHash := changeSet.GroupHash()
+	targetBranchHash := changeSet.Hash()
 	targetBranchExists := false
 	for _, ref := range remoteRefs {
 		refName := ref.Name().String()
@@ -98,7 +98,7 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if targetBranchExists {
 		return nil
 	}
-	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
+	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changeSet.Branch(branchPrefix)))
 
 	baseBranch, err := repo.Head()
 	if err != nil {
@@ -109,8 +109,8 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if err != nil {
 		return fmt.Errorf("unable to create target branch: %w", err)
 	}
-	message, fullMessage := changes.Message()
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
+	message, fullMessage := changeSet.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changeSet, changeSet.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -126,8 +126,8 @@ func (p GitLabGitProvider) Request(dir string, changes Changes, callbacks ...fun
 
 	LogDebug("Creating pull request for branch %s to gitlab project %s", targetBranch.Short(), *projectId)
 	pullBase := string(baseBranch.Name().Short())
-	pullHead := changes.Branch(branchPrefix)
-	pullTitle := changes.Title()
+	pullHead := changeSet.Branch(branchPrefix)
+	pullTitle := changeSet.Title()
 	pullBody := fullMessage
 	removeSourceBranch := true
 	_, res, err := client.MergeRequests.CreateMergeRequest(*projectId, &gitlab.CreateMergeRequestOptions{

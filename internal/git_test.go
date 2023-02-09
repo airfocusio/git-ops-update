@@ -32,7 +32,7 @@ func TestApplyChangesAsCommit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, status.IsClean())
 
-	_, err = applyChangesAsCommit(*worktree, dir, Changes{}, "commit", GitAuthor{Name: "test", Email: "test"})
+	_, err = applyChangesAsCommit(*worktree, dir, ChangeSet{}, "commit", GitAuthor{Name: "test", Email: "test"})
 	assert.NoError(t, err)
 
 	status, err = worktree.Status()
@@ -46,7 +46,7 @@ func TestApplyChangesAsCommit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, status.IsClean())
 
-	_, err = applyChangesAsCommit(*worktree, dir, Changes{}, "commit", GitAuthor{Name: "test", Email: "test"})
+	_, err = applyChangesAsCommit(*worktree, dir, ChangeSet{}, "commit", GitAuthor{Name: "test", Email: "test"})
 	assert.NoError(t, err)
 
 	status, err = worktree.Status()
@@ -60,7 +60,7 @@ func TestApplyChangesAsCommit(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, status.IsClean())
 
-	_, err = applyChangesAsCommit(*worktree, dir, Changes{}, "commit", GitAuthor{Name: "test", Email: "test"})
+	_, err = applyChangesAsCommit(*worktree, dir, ChangeSet{}, "commit", GitAuthor{Name: "test", Email: "test"})
 	assert.NoError(t, err)
 
 	status, err = worktree.Status()

@@ -30,7 +30,7 @@ type GitHubGitProvider struct {
 	InheritLabels GitHubGitProviderInheritLabels
 }
 
-func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitHubGitProvider) Push(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -40,8 +40,8 @@ func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func()
 		return fmt.Errorf("unable to open git worktree: %w", err)
 	}
 
-	message, _ := changes.Message()
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
+	message, _ := changeSet.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changeSet, changeSet.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -57,7 +57,7 @@ func (p GitHubGitProvider) Push(dir string, changes Changes, callbacks ...func()
 	return nil
 }
 
-func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...func() error) error {
+func (p GitHubGitProvider) Request(dir string, changeSet ChangeSet, callbacks ...func() error) error {
 	repo, err := git.PlainOpen(dir)
 	if err != nil {
 		return fmt.Errorf("unable to open git repository: %w", err)
@@ -90,9 +90,9 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 
 	existingBranches := []string{}
 	existingPullRequests := []*github.PullRequest{}
-	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changes.BranchFindPrefix(branchPrefix))
-	targetBranchGroupHash := changes.GroupHash()
-	targetBranchHash := changes.Hash()
+	targetBranchFindPrefix := fmt.Sprintf("refs/heads/%s", changeSet.BranchFindPrefix(branchPrefix))
+	targetBranchGroupHash := changeSet.GroupHash()
+	targetBranchHash := changeSet.Hash()
 	targetBranchExists := false
 	for _, ref := range remoteRefs {
 		refName := ref.Name().String()
@@ -114,7 +114,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	if targetBranchExists {
 		return nil
 	}
-	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changes.Branch(branchPrefix)))
+	targetBranch := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", changeSet.Branch(branchPrefix)))
 
 	baseBranch, err := repo.Head()
 	if err != nil {
@@ -126,8 +126,8 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 		return fmt.Errorf("unable to create target branch: %w", err)
 	}
 
-	message, fullMessage := changes.Message()
-	_, err = applyChangesAsCommit(*worktree, dir, changes, changes.Title()+"\n\n"+message, p.Author, callbacks...)
+	message, fullMessage := changeSet.Message()
+	_, err = applyChangesAsCommit(*worktree, dir, changeSet, changeSet.Title()+"\n\n"+message, p.Author, callbacks...)
 	if err != nil {
 		return fmt.Errorf("unable to commit changes: %w", err)
 	}
@@ -144,7 +144,7 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 	LogDebug("Creating pull request for branch %s to github repository %s/%s", targetBranch.Short(), *ownerName, *repoName)
 	pullRequestBase := string(baseBranch.Name())
 	pullRequestHead := string(targetBranch)
-	pullRequestTitle := changes.Title()
+	pullRequestTitle := changeSet.Title()
 	pullRequestBody := fullMessage
 	pullRequest, res, err := client.PullRequests.Create(context.Background(), *ownerName, *repoName, &github.NewPullRequest{
 		Title: &pullRequestTitle,
@@ -206,8 +206,8 @@ func (p GitHubGitProvider) Request(dir string, changes Changes, callbacks ...fun
 func (p *GitHubGitProvider) ExtractInheritedLabels(pullRequests []*github.PullRequest) []string {
 	result := []string{}
 	if p.InheritLabels.Enabled {
-		allLabels := sliceUnique(sliceFlatMap(pullRequests, func(pr *github.PullRequest) []string {
-			return sliceMap(pr.Labels, func(l *github.Label) string {
+		allLabels := SliceUnique(SliceFlatMap(pullRequests, func(pr *github.PullRequest) []string {
+			return SliceMap(pr.Labels, func(l *github.Label) string {
 				return *l.Name
 			})
 		}))
