@@ -42,37 +42,37 @@ var c3 = Change{
 }
 
 func TestChangesGroupHash(t *testing.T) {
-	assert.Equal(t, "cdb34bd928617494", Changes{c1}.GroupHash())
-	assert.Equal(t, "79baa33623f66cab", Changes{c2}.GroupHash())
-	assert.Equal(t, "7828b1505ed039e7", Changes{c1, c2}.GroupHash())
+	assert.Equal(t, "cdb34bd928617494", ChangeSet{Changes: []Change{c1}}.GroupHash())
+	assert.Equal(t, "79baa33623f66cab", ChangeSet{Changes: []Change{c2}}.GroupHash())
+	assert.Equal(t, "7828b1505ed039e7", ChangeSet{Changes: []Change{c1, c2}}.GroupHash())
 }
 
 func TestChangesHash(t *testing.T) {
-	assert.Equal(t, "f947389f23a7d6f7", Changes{c1}.Hash())
-	assert.Equal(t, "c3de406196d88bed", Changes{c2}.Hash())
-	assert.Equal(t, "cf0b28c1d50d0788", Changes{c1, c2}.Hash())
+	assert.Equal(t, "f947389f23a7d6f7", ChangeSet{Changes: []Change{c1}}.Hash())
+	assert.Equal(t, "c3de406196d88bed", ChangeSet{Changes: []Change{c2}}.Hash())
+	assert.Equal(t, "cf0b28c1d50d0788", ChangeSet{Changes: []Change{c1, c2}}.Hash())
 }
 
 func TestChangesTitle(t *testing.T) {
-	assert.Equal(t, "Update my-registry/my-resource:2.0.0", Changes{c1}.Title())
-	assert.Equal(t, "Update my-registry/my-resource:2.0.0, my-registry2/my-resource2:4.0.0", Changes{c1, c2}.Title())
+	assert.Equal(t, "Update my-registry/my-resource:2.0.0", ChangeSet{Changes: []Change{c1}}.Title())
+	assert.Equal(t, "Update my-registry/my-resource:2.0.0, my-registry2/my-resource2:4.0.0", ChangeSet{Changes: []Change{c1, c2}}.Title())
 }
 
 func TestChangesMessage(t *testing.T) {
-	m1, m1Full := Changes{c1}.Message()
+	m1, m1Full := ChangeSet{Changes: []Change{c1}}.Message()
 	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine", m1)
 	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\nFooter1", m1Full)
 
-	m2, m2Full := Changes{c1, c2}.Message()
+	m2, m2Full := ChangeSet{Changes: []Change{c1, c2}}.Message()
 	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine", m2)
 	assert.Equal(t, "Update folder/file.yaml:3 from my-image:1.0.0 to my-image:2.0.0\nLine\n\n---\n\nUpdate folder/file2.yaml:10 from my-image2:3.0.0 to my-image2:4.0.0\nMulti\nLine\n\nFooter1\nFooter2", m2Full)
 
-	m3, m3Full := Changes{c3}.Message()
+	m3, m3Full := ChangeSet{Changes: []Change{c3}}.Message()
 	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", m3)
 	assert.Equal(t, "Update folder/file3.yaml:16 from my-image3:5.0.0 to my-image3:6.0.0", m3Full)
 }
 
 func TestChangesBranch(t *testing.T) {
-	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0/cdb34bd928617494/f947389f23a7d6f7", Changes{c1}.Branch("git-ops-update"))
-	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0-my-registry2-my-resource2-4.0.0/7828b1505ed039e7/cf0b28c1d50d0788", Changes{c1, c2}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0/cdb34bd928617494/f947389f23a7d6f7", ChangeSet{Changes: []Change{c1}}.Branch("git-ops-update"))
+	assert.Equal(t, "git-ops-update/my-registry-my-resource-2.0.0-my-registry2-my-resource2-4.0.0/7828b1505ed039e7/cf0b28c1d50d0788", ChangeSet{Changes: []Change{c1, c2}}.Branch("git-ops-update"))
 }

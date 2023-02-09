@@ -89,7 +89,7 @@ func TestGithubGitProviderExtractInheritedLabels(t *testing.T) {
 		prs := []*github.PullRequest{
 			{},
 			{
-				Labels: sliceMap(tc.inputLabels, func(name string) *github.Label {
+				Labels: SliceMap(tc.inputLabels, func(name string) *github.Label {
 					return &github.Label{
 						Name: &name,
 					}

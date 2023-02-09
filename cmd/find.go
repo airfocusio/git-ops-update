@@ -74,17 +74,60 @@ var (
 					}
 				}
 			} else {
-				for _, r := range result {
-					if r.Error != nil {
+				errored := internal.SliceFilter(result, func(r internal.UpdateVersionResult) bool {
+					return r.Error != nil
+				})
+				for _, r := range errored {
+					errorCount += 1
+					internal.LogError("%v", r.Error)
+				}
+
+				unerrored := internal.SliceFilter(result, func(r internal.UpdateVersionResult) bool {
+					return r.Error == nil && r.Action != nil && r.Change != nil
+				})
+				ungrouped := internal.SliceFilter(unerrored, func(r internal.UpdateVersionResult) bool {
+					return r.Change.Group == ""
+				})
+				grouped := internal.SliceGroupBy(internal.SliceFilter(unerrored, func(u internal.UpdateVersionResult) bool {
+					return u.Change.Group != ""
+				}), func(u internal.UpdateVersionResult) string {
+					return (*u.Action).Identifier() + ":" + u.Change.Group
+				})
+
+				type task struct {
+					action    internal.Action
+					changeSet internal.ChangeSet
+				}
+
+				tasks := []task{}
+				tasks = append(tasks, internal.SliceMap(ungrouped, func(r internal.UpdateVersionResult) task {
+					return task{
+						action: *r.Action,
+						changeSet: internal.ChangeSet{
+							Changes: []internal.Change{*r.Change},
+						},
+					}
+				})...)
+				tasks = append(tasks, internal.MapMap(grouped, func(rs []internal.UpdateVersionResult, group string) task {
+					return task{
+						action: *rs[0].Action,
+						changeSet: internal.ChangeSet{
+							Group: group,
+							Changes: internal.SliceMap(rs, func(r internal.UpdateVersionResult) internal.Change {
+								return *r.Change
+							}),
+						},
+					}
+				})...)
+
+				for _, t := range tasks {
+					err := internal.ApplyUpdate(dir, *config, cacheProvider, t.action, t.changeSet)
+					if err != nil {
 						errorCount += 1
-						internal.LogError("%v", r.Error)
-					} else if r.Change != nil && r.Action != nil {
-						err := internal.ApplyUpdate(dir, *config, cacheProvider, *r.Action, *r.Change)
-						if err != nil {
-							errorCount += 1
-							internal.LogError("%v", err)
-						} else {
-							internal.LogInfo("%s:%d the version was updated from %s to %s", r.Change.File, r.Change.LineNum, r.Change.OldVersion, r.Change.NewVersion)
+						internal.LogError("%v", err)
+					} else {
+						for _, c := range t.changeSet.Changes {
+							internal.LogInfo("%s:%d the version was updated from %s to %s", c.File, c.LineNum, c.OldVersion, c.NewVersion)
 						}
 					}
 				}

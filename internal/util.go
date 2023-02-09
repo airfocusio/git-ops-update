@@ -72,7 +72,7 @@ func trimRightMultilineString(str string, cutset string) string {
 	return strings.Join(lines, "\n")
 }
 
-func sliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
+func SliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
 	result := []E2{}
 	for _, e := range slice {
 		result = append(result, mapFn(e))
@@ -80,7 +80,7 @@ func sliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
 	return result
 }
 
-func sliceFilter[E any](slice []E, filterFn func(e E) bool) []E {
+func SliceFilter[E any](slice []E, filterFn func(e E) bool) []E {
 	result := []E{}
 	for _, e := range slice {
 		if filterFn(e) {
@@ -90,7 +90,7 @@ func sliceFilter[E any](slice []E, filterFn func(e E) bool) []E {
 	return result
 }
 
-func sliceFlatMap[E any, E2 any](slice []E, mapFn func(e E) []E2) []E2 {
+func SliceFlatMap[E any, E2 any](slice []E, mapFn func(e E) []E2) []E2 {
 	result := []E2{}
 	for _, e := range slice {
 		result = append(result, mapFn(e)...)
@@ -98,7 +98,7 @@ func sliceFlatMap[E any, E2 any](slice []E, mapFn func(e E) []E2) []E2 {
 	return result
 }
 
-func sliceUnique[E comparable](slice []E) []E {
+func SliceUnique[E comparable](slice []E) []E {
 	values := map[E]bool{}
 	result := []E{}
 	for _, e := range slice {
@@ -106,6 +106,27 @@ func sliceUnique[E comparable](slice []E) []E {
 			values[e] = true
 			result = append(result, e)
 		}
+	}
+	return result
+}
+
+func SliceGroupBy[E any](slice []E, keyFn func(e E) string) map[string][]E {
+	result := map[string][]E{}
+	for _, e := range slice {
+		key := keyFn(e)
+		if _, ok := result[key]; !ok {
+			result[key] = []E{e}
+		} else {
+			result[key] = append(result[key], e)
+		}
+	}
+	return result
+}
+
+func MapMap[K comparable, V any, E any](slice map[K]V, mapFn func(v V, k K) E) []E {
+	result := []E{}
+	for k, v := range slice {
+		result = append(result, mapFn(v, k))
 	}
 	return result
 }

@@ -127,11 +127,11 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, st
 		result1 = strings.Trim(result1, "\n ")
 
 		result2 := ""
-		mentions = sliceFilter(sliceUnique(mentions), func(mention string) bool {
+		mentions = SliceFilter(SliceUnique(mentions), func(mention string) bool {
 			return !strings.HasSuffix(mention, "[bot]")
 		})
 		if len(mentions) > 0 {
-			result2 = result2 + "/cc " + strings.Join(sliceMap(mentions, func(mention string) string {
+			result2 = result2 + "/cc " + strings.Join(SliceMap(mentions, func(mention string) string {
 				return "@" + mention
 			}), ", ")
 			result2 = result2 + "\n"
