@@ -34,9 +34,14 @@ const gitHubMaxPullRequestTitleLength = 256
 
 func (cs ChangeSet) GroupHash() string {
 	temp := []byte{}
-	for _, c := range cs.Changes {
-		cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d", c.File, c.LineNum)))
-		temp = append(temp, cHash[:]...)
+	if cs.Group == "" {
+		for _, c := range cs.Changes {
+			cHash := sha256.Sum256([]byte(fmt.Sprintf("%s#%d", c.File, c.LineNum)))
+			temp = append(temp, cHash[:]...)
+		}
+	} else {
+		gHash := sha256.Sum256([]byte(cs.Group))
+		temp = gHash[:]
 	}
 	hash := sha256.Sum256(temp)
 	return capString(hex.EncodeToString(hash[:]), 16)
@@ -57,7 +62,7 @@ func (cs ChangeSet) Branch(prefix string) string {
 	for _, change := range cs.Changes {
 		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
 	}
-
+	updates = SliceUnique(updates)
 	return fmt.Sprintf(
 		"%s/%s/%s/%s",
 		cs.BranchFindPrefix(prefix),
@@ -70,15 +75,12 @@ func (cs ChangeSet) BranchFindPrefix(prefix string) string {
 	return prefix
 }
 
-func (c Change) Message() string {
-	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.LineNum, c.OldValue, c.NewValue)
-}
-
 func (cs ChangeSet) Title() string {
 	updates := []string{}
 	for _, change := range cs.Changes {
 		updates = append(updates, fmt.Sprintf("%s/%s:%s", change.RegistryName, change.ResourceName, change.NewVersion))
 	}
+	updates = SliceUnique(updates)
 	result := fmt.Sprintf("Update %s", strings.Join(updates, ", "))
 	if len(result) > gitHubMaxPullRequestTitleLength {
 		return result[0:gitHubMaxPullRequestTitleLength]
@@ -99,6 +101,10 @@ func (cs ChangeSet) Message() (string, string) {
 		changeFooters = append(changeFooters, strings.Trim(renderedFooter, "\n "))
 	}
 	return strings.Join(changeComments, "\n\n---\n\n"), strings.Trim(strings.Join(changeComments, "\n\n---\n\n")+"\n\n"+strings.Join(changeFooters, "\n"), "\n ")
+}
+
+func (c Change) Message() string {
+	return fmt.Sprintf("Update %s:%d from %s to %s", c.File, c.LineNum, c.OldValue, c.NewValue)
 }
 
 func (c Change) Push(dir string, fileHooks ...func(file string) error) error {

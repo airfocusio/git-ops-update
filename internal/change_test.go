@@ -45,12 +45,14 @@ func TestChangesGroupHash(t *testing.T) {
 	assert.Equal(t, "cdb34bd928617494", ChangeSet{Changes: []Change{c1}}.GroupHash())
 	assert.Equal(t, "79baa33623f66cab", ChangeSet{Changes: []Change{c2}}.GroupHash())
 	assert.Equal(t, "7828b1505ed039e7", ChangeSet{Changes: []Change{c1, c2}}.GroupHash())
+	assert.Equal(t, "301e5175dc9cc3f0", ChangeSet{Group: "c1c2", Changes: []Change{c1, c2}}.GroupHash())
 }
 
 func TestChangesHash(t *testing.T) {
 	assert.Equal(t, "f947389f23a7d6f7", ChangeSet{Changes: []Change{c1}}.Hash())
 	assert.Equal(t, "c3de406196d88bed", ChangeSet{Changes: []Change{c2}}.Hash())
 	assert.Equal(t, "cf0b28c1d50d0788", ChangeSet{Changes: []Change{c1, c2}}.Hash())
+	assert.Equal(t, "cf0b28c1d50d0788", ChangeSet{Group: "c1c2", Changes: []Change{c1, c2}}.Hash())
 }
 
 func TestChangesTitle(t *testing.T) {
