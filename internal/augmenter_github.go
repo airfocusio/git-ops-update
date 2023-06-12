@@ -81,9 +81,17 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, st
 				}
 				if commit.Commit != nil && commit.HTMLURL != nil {
 					if commit.Commit.Message != nil {
-						message, pullRequestNumbers := a.ExtractPullRequestNumbers(*commit.Commit.Message)
-						for _, pullRequestNumber := range pullRequestNumbers {
-							pullRequest, res, err := client.PullRequests.Get(ctx, owner, repo, pullRequestNumber)
+						message, pullRequestReferences := a.ExtractPullRequestReferences(*commit.Commit.Message)
+						for _, pullRequestReference := range pullRequestReferences {
+							pullRequestReferenceOwner := owner
+							pullRequestReferenceRepo := repo
+							if pullRequestReference.Owner != "" {
+								pullRequestReferenceOwner = pullRequestReference.Owner
+							}
+							if pullRequestReference.Repo != "" {
+								pullRequestReferenceRepo = pullRequestReference.Repo
+							}
+							pullRequest, res, err := client.PullRequests.Get(ctx, pullRequestReferenceOwner, pullRequestReferenceRepo, pullRequestReference.Number)
 							defer res.Body.Close()
 							if pullRequest != nil && err == nil {
 								if pullRequest.User != nil {
@@ -96,7 +104,7 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, st
 							} else {
 								pullRequests = append(pullRequests, GithubLink{
 									Title: "???",
-									URL:   fmt.Sprintf("https://github.com/%s/%s/pull/%d", owner, repo, pullRequestNumber),
+									URL:   fmt.Sprintf("https://github.com/%s/%s/pull/%d", pullRequestReferenceOwner, pullRequestReferenceRepo, pullRequestReference.Number),
 								})
 							}
 						}
@@ -152,13 +160,23 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, st
 	return "", "", nil
 }
 
-func (a GithubAugmenter) ExtractPullRequestNumbers(text string) (string, []int) {
-	pullRequestNumberRegex := regexp.MustCompile(`\(?#(?P<number>\d+)\)?`)
-	pullRequestNumbers := []int{}
+type GithubPullRequestReference struct {
+	Owner  string
+	Repo   string
+	Number int
+}
+
+func (a GithubAugmenter) ExtractPullRequestReferences(text string) (string, []GithubPullRequestReference) {
+	pullRequestNumberRegex := regexp.MustCompile(`\(?(?:(?P<owner>[a-zA-Z0-9-_]+)/(?P<repo>[a-zA-Z0-9-_]+))?#(?P<number>\d+)\)?`)
+	pullRequestNumbers := []GithubPullRequestReference{}
 	matches := pullRequestNumberRegex.FindAllStringSubmatch(text, 100)
 	for _, m := range matches {
-		if pullRequestNumber, err := strconv.Atoi(m[1]); err == nil {
-			pullRequestNumbers = append(pullRequestNumbers, pullRequestNumber)
+		if pullRequestNumber, err := strconv.Atoi(m[3]); err == nil {
+			pullRequestNumbers = append(pullRequestNumbers, GithubPullRequestReference{
+				Owner:  m[1],
+				Repo:   m[2],
+				Number: pullRequestNumber,
+			})
 		}
 	}
 	return trimRightMultilineString(pullRequestNumberRegex.ReplaceAllLiteralString(text, ""), " "), pullRequestNumbers
