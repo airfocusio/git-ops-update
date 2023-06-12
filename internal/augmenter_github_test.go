@@ -61,36 +61,42 @@ func TestGithubAugmenterRenderMessage(t *testing.T) {
 	})
 }
 
-func TestGithubAugmenterExtractPullRequestNumbers(t *testing.T) {
+func TestGithubAugmenterExtractPullRequestReferences(t *testing.T) {
 	a := GithubAugmenter{}
 
 	t.Run("empty", func(t *testing.T) {
-		text, prs := a.ExtractPullRequestNumbers("")
+		text, prs := a.ExtractPullRequestReferences("")
 		assert.Equal(t, "", text)
-		assert.Equal(t, []int{}, prs)
+		assert.Equal(t, []GithubPullRequestReference{}, prs)
 	})
 
 	t.Run("none", func(t *testing.T) {
-		text, prs := a.ExtractPullRequestNumbers("Hello World")
+		text, prs := a.ExtractPullRequestReferences("Hello World")
 		assert.Equal(t, "Hello World", text)
-		assert.Equal(t, []int{}, prs)
+		assert.Equal(t, []GithubPullRequestReference{}, prs)
 	})
 
 	t.Run("single", func(t *testing.T) {
-		text, prs := a.ExtractPullRequestNumbers("Hello World #1")
+		text, prs := a.ExtractPullRequestReferences("Hello World #1")
 		assert.Equal(t, "Hello World", text)
-		assert.Equal(t, []int{1}, prs)
+		assert.Equal(t, []GithubPullRequestReference{{Number: 1}}, prs)
 	})
 
 	t.Run("single in parentheses", func(t *testing.T) {
-		text, prs := a.ExtractPullRequestNumbers("Hello World (#1)")
+		text, prs := a.ExtractPullRequestReferences("Hello World (#1)")
 		assert.Equal(t, "Hello World", text)
-		assert.Equal(t, []int{1}, prs)
+		assert.Equal(t, []GithubPullRequestReference{{Number: 1}}, prs)
 	})
 
 	t.Run("multiple", func(t *testing.T) {
-		text, prs := a.ExtractPullRequestNumbers("Hello World (#1)\n\nAnother one (#234)")
+		text, prs := a.ExtractPullRequestReferences("Hello World (#1)\n\nAnother one (#234)")
 		assert.Equal(t, "Hello World\n\nAnother one", text)
-		assert.Equal(t, []int{1, 234}, prs)
+		assert.Equal(t, []GithubPullRequestReference{{Number: 1}, {Number: 234}}, prs)
+	})
+
+	t.Run("other repo", func(t *testing.T) {
+		text, prs := a.ExtractPullRequestReferences("Hello World (#1)\n\nAnother one (#234)\n\nAnd another one (owner/repo#56)")
+		assert.Equal(t, "Hello World\n\nAnother one\n\nAnd another one", text)
+		assert.Equal(t, []GithubPullRequestReference{{Number: 1}, {Number: 234}, {Owner: "owner", Repo: "repo", Number: 56}}, prs)
 	})
 }
