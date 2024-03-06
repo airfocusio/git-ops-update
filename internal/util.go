@@ -72,6 +72,15 @@ func trimRightMultilineString(str string, cutset string) string {
 	return strings.Join(lines, "\n")
 }
 
+func SliceExists[E any](slice []E, existFn func(e E) bool) bool {
+	for _, e := range slice {
+		if existFn(e) {
+			return true
+		}
+	}
+	return false
+}
+
 func SliceMap[E any, E2 any](slice []E, mapFn func(e E) E2) []E2 {
 	result := []E2{}
 	for _, e := range slice {

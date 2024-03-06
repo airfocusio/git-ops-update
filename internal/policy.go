@@ -224,8 +224,11 @@ func (p Policy) FindNext(currentVersion string, availableVersions []string, pref
 	}
 	if len(allFilteredSortedVersions) > 0 {
 		nextVersion := (allFilteredSortedVersions)[0]
+		if !SliceExists(allFilteredSortedVersions, func(v string) bool { return v == currentVersion }) {
+			return &nextVersion, nil
+		}
 		if p.Compare(currentVersion, nextVersion, prefix, suffix) < 0 {
-			return &allFilteredSortedVersions[0], nil
+			return &nextVersion, nil
 		}
 	}
 	return &currentVersion, nil
