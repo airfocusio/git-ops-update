@@ -2,8 +2,6 @@ module github.com/airfocusio/git-ops-update
 
 go 1.21
 
-toolchain go1.21.3
-
 require (
 	github.com/airfocusio/go-expandenv v0.1.3
 	github.com/blang/semver/v4 v4.0.0
