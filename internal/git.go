@@ -58,8 +58,9 @@ func applyChangesAsCommit(worktree git.Worktree, dir string, changeSet ChangeSet
 
 	signature := object.Signature{Name: author.Name, Email: author.Email, When: time.Now()}
 	commit, err := worktree.Commit(message, &git.CommitOptions{
-		Author:  &signature,
-		SignKey: author.SignKey,
+		Author:            &signature,
+		SignKey:           author.SignKey,
+		AllowEmptyCommits: true,
 	})
 	if err != nil {
 		return nil, err
