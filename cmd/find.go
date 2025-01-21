@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 
 	"github.com/airfocusio/git-ops-update/internal"
@@ -29,7 +29,7 @@ var (
 		Args:          cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := findCmdDirectory
-			fileBytes, err := ioutil.ReadFile(internal.FileResolvePath(dir, ".git-ops-update.yaml"))
+			fileBytes, err := os.ReadFile(internal.FileResolvePath(dir, ".git-ops-update.yaml"))
 			if err != nil {
 				return fmt.Errorf("unable to initialize: %w", err)
 			}
