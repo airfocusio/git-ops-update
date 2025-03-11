@@ -12,7 +12,7 @@ test-cover:
 	go tool cover -html=coverage.out
 
 build:
-	goreleaser release --rm-dist --skip-publish --snapshot
+	goreleaser release --clean --snapshot --skip=publish
 
 release:
-	goreleaser release --rm-dist
+	goreleaser release --clean
