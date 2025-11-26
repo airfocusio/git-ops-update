@@ -10,7 +10,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 var _ GitProvider = (*GitLabGitProvider)(nil)
@@ -19,7 +19,7 @@ type GitLabGitProvider struct {
 	Author      GitAuthor
 	URL         string
 	AccessToken string
-	AssigneeIDs []int
+	AssigneeIDs []int64
 }
 
 func (p GitLabGitProvider) Push(dir string, changeSet ChangeSet, callbacks ...func() error) error {

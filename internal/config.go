@@ -84,9 +84,9 @@ type RawConfigGitGitHub struct {
 }
 
 type RawConfigGitGitLab struct {
-	URL         string `yaml:"url"`
-	AccessToken string `yaml:"accessToken"`
-	AssigneeIDs []int  `yaml:"assigneeIDs"`
+	URL         string  `yaml:"url"`
+	AccessToken string  `yaml:"accessToken"`
+	AssigneeIDs []int64 `yaml:"assigneeIDs"`
 }
 
 type RawConfigGitAuthor struct {
