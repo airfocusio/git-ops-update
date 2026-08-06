@@ -66,6 +66,11 @@ func (a GithubAugmenter) RenderMessage(config Config, change Change) (string, st
 			PerPage: 100,
 		})
 		defer res.Body.Close()
+		if err != nil {
+			LogWarning("Failed to compare commits for %s/%s: %v", owner, repo, err)
+		} else if comparison == nil {
+			LogWarning("Compare commits for %s/%s returned nil comparison", owner, repo)
+		}
 
 		result1 := GithubLink{
 			Title: "Compare",
