@@ -253,13 +253,13 @@ func TestPolicyFilterAndSort(t *testing.T) {
 		},
 	}
 
-	actual, err = p5.FilterAndSort("1.0.0", strings.Split("2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
+	actual, err = p5.FilterAndSort("1.0.0", strings.Split("1.0.0 2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
 		"key.build": "b",
 	})
 	if assert.NoError(t, err) {
 		assert.Equal(t, strings.Split("2.0.0+b", " "), actual)
 	}
-	actual, err = p5.FilterAndSort("1.0.0", strings.Split("2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
+	actual, err = p5.FilterAndSort("1.0.0", strings.Split("1.0.0 2.0.0+a 2.0.0+b 2.0.0+c", " "), "", "", map[string]interface{}{
 		"key.build": []interface{}{"a", "c"},
 	})
 	if assert.NoError(t, err) {
@@ -334,13 +334,76 @@ func TestPolicyFindNext(t *testing.T) {
 		Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
 		Extracts: []Extract{
 			{
+				Key:      "version",
 				Value:    "<all>",
 				Strategy: SemverExtractStrategy{},
 			},
 		},
 	}
+	actual, err = p4.FindNext("0.10.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.3", *actual)
+	}
+	actual, err = p4.FindNext("0.10.4-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.3", *actual)
+	}
+	actual, err = p4.FindNext("0.11.0-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.3", *actual)
+	}
+	actual, err = p4.FindNext("0.12.0-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.3", *actual)
+	}
+	actual, err = p4.FindNext("0.12.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.12.0", *actual)
+	}
+	actual, err = p4.FindNext("0.12.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", map[string]interface{}{
+		"version.major": "0",
+		"version.minor": "10",
+	})
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.10.3", *actual)
+	}
 
-	actual, err = p4.FindNext("0.10.4-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.11.0-pre"}, "", "", nil)
+	p5 := Policy{
+		Pattern: regexp.MustCompile(`^(?P<all>.*)$`),
+		Extracts: []Extract{
+			{
+				Key:   "version",
+				Value: "<all>",
+				Strategy: SemverExtractStrategy{
+					AllowPrereleases: true,
+				},
+			},
+		},
+	}
+	actual, err = p5.FindNext("0.10.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.11.0-pre", *actual)
+	}
+	actual, err = p5.FindNext("0.10.4-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.11.0-pre", *actual)
+	}
+	actual, err = p5.FindNext("0.11.0-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.11.0-pre", *actual)
+	}
+	actual, err = p5.FindNext("0.12.0-pre", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.12.0-pre", *actual)
+	}
+	actual, err = p5.FindNext("0.12.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", nil)
+	if assert.NoError(t, err) {
+		assert.Equal(t, "0.12.0", *actual)
+	}
+	actual, err = p5.FindNext("0.12.0", []string{"0.10.0", "0.10.1", "0.10.2", "0.10.3", "0.10.4-pre", "0.11.0-pre"}, "", "", map[string]interface{}{
+		"version.major": "0",
+		"version.minor": "10",
+	})
 	if assert.NoError(t, err) {
 		assert.Equal(t, "0.10.4-pre", *actual)
 	}
